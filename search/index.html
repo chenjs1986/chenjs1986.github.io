@@ -128,22 +128,47 @@
     </nav>
 </header>
 <main class="main">
+  <div id="search-container">
+    <input type="text" id="search-input" placeholder="Search...">
+    <ul id="search-results"></ul>
+  </div>
 
-<header class="page-header">
-    <h1>Search <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-    </h1>
-    <div class="post-meta"></div>
-</header>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lunr.js/2.3.9/lunr.min.js"></script>
+  <script>
+    const searchInput = document.getElementById('search-input');
+    const searchResults = document.getElementById('search-results');
 
-<div id="searchbox">
-    <input id="searchInput" autofocus placeholder="Search ↵"
-        aria-label="search" type="search" autocomplete="off" maxlength="64">
-    <ul id="searchResults" aria-label="search results"></ul>
-</div>
+    fetch('/index.json')
+      .then(response => response.json())
+      .then(data => {
+        const idx = lunr(function () {
+          this.ref('permalink');
+          this.field('title');
+          this.field('content');
+
+          data.forEach(doc => {
+            this.add(doc);
+          });
+        });
+
+        searchInput.addEventListener('input', function () {
+          const query = searchInput.value;
+          const results = idx.search(query);
+          searchResults.innerHTML = '';
+
+          results.forEach(result => {
+            const item = data.find(d => d.permalink === result.ref);
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = item.permalink;
+            a.textContent = item.title;
+            li.appendChild(a);
+            searchResults.appendChild(li);
+          });
+        });
+      });
+  </script>
+
     </main>
     
 <footer class="footer">
