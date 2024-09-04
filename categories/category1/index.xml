@@ -25,6 +25,13 @@ I will use the blog to record my work and some knowleage.
 I will use the blog to record my work and some knowleage.</description>
     </item>
     <item>
+      <title>Welcome!!</title>
+      <link>http://localhost:1313/posts/1/</link>
+      <pubDate>Mon, 02 Oct 2023 12:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/posts/1/</guid>
+      <description></description>
+    </item>
+    <item>
       <title>My First Post</title>
       <link>http://localhost:1313/archives/test1/</link>
       <pubDate>Sun, 01 Oct 2023 12:00:00 +0000</pubDate>
@@ -37,6 +44,14 @@ I will use the blog to record my work and some knowleage.</description>
       <pubDate>Sun, 01 Oct 2023 12:00:00 +0000</pubDate>
       <guid>http://localhost:1313/posts/second/</guid>
       <description>this is a post test</description>
+    </item>
+    <item>
+      <title>My Second Post</title>
+      <link>http://localhost:1313/posts/2/</link>
+      <pubDate>Sun, 01 Oct 2023 12:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/posts/2/</guid>
+      <description>post 中第2篇文章 2023-10-01
+C:\Users\dj010675\chenjs1986.github.io\frankblog\content\posts</description>
     </item>
   </channel>
 </rss>
