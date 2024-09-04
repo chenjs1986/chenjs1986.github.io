@@ -2,52 +2,50 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>http://localhost:1313/</loc>
+    <loc>https://chenjs1986.github.io/</loc>
     <lastmod>2024-09-02T12:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/archives/</loc>
+    <loc>https://chenjs1986.github.io/archives/</loc>
     <lastmod>2024-09-02T12:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/categories/</loc>
+    <loc>https://chenjs1986.github.io/categories/</loc>
     <lastmod>2024-09-02T12:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/categories/category1/</loc>
+    <loc>https://chenjs1986.github.io/categories/category1/</loc>
     <lastmod>2024-09-02T12:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/archives/test2/</loc>
+    <loc>https://chenjs1986.github.io/archives/test2/</loc>
     <lastmod>2024-09-02T12:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/tags/r/</loc>
+    <loc>https://chenjs1986.github.io/tags/r/</loc>
     <lastmod>2024-09-02T12:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/tags/</loc>
+    <loc>https://chenjs1986.github.io/tags/</loc>
     <lastmod>2024-09-02T12:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/posts/</loc>
+    <loc>https://chenjs1986.github.io/posts/</loc>
     <lastmod>2023-10-02T12:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/tags/python/</loc>
+    <loc>https://chenjs1986.github.io/tags/python/</loc>
     <lastmod>2023-10-02T12:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/posts/1/</loc>
+    <loc>https://chenjs1986.github.io/posts/1/</loc>
     <lastmod>2023-10-02T12:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/archives/test1/</loc>
+    <loc>https://chenjs1986.github.io/archives/test1/</loc>
     <lastmod>2023-10-01T12:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/posts/second/</loc>
+    <loc>https://chenjs1986.github.io/posts/second/</loc>
     <lastmod>2023-10-01T12:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/posts/2/</loc>
+    <loc>https://chenjs1986.github.io/posts/2/</loc>
     <lastmod>2023-10-01T12:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/tags/r-language/</loc>
+    <loc>https://chenjs1986.github.io/tags/r-language/</loc>
     <lastmod>2023-10-01T12:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/about/</loc>
+    <loc>https://chenjs1986.github.io/about/</loc>
   </url><url>
-    <loc>http://localhost:1313/search/</loc>
-  </url><url>
-    <loc>http://localhost:1313/series/</loc>
+    <loc>https://chenjs1986.github.io/search/</loc>
   </url>
 </urlset>
