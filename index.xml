@@ -4,8 +4,14 @@
     <title>Frank&#39;s Blog</title>
     <link>https://chenjs1986.github.io/</link>
     <description>Recent content on Frank&#39;s Blog</description>
+    <image>
+      <title>Frank&#39;s Blog</title>
+      <url>https://chenjs1986.github.io/images/papermod-cover.png</url>
+      <link>https://chenjs1986.github.io/images/papermod-cover.png</link>
+    </image>
     <generator>Hugo -- 0.133.1</generator>
-    <language>utf-8</language>
+    <language>en</language>
+    <copyright>PaperMod Contributors</copyright>
     <lastBuildDate>Mon, 02 Sep 2024 12:00:00 +0000</lastBuildDate>
     <atom:link href="https://chenjs1986.github.io/index.xml" rel="self" type="application/rss+xml" />
     <item>
