@@ -12,8 +12,15 @@
     <generator>Hugo -- 0.133.1</generator>
     <language>en</language>
     <copyright>PaperMod Contributors</copyright>
-    <lastBuildDate>Mon, 02 Sep 2024 12:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Wed, 04 Sep 2024 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://chenjs1986.github.io/categories/category1/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>HOW TO USE R</title>
+      <link>https://chenjs1986.github.io/posts/r-how-to-use-r/</link>
+      <pubDate>Wed, 04 Sep 2024 00:00:00 +0000</pubDate>
+      <guid>https://chenjs1986.github.io/posts/r-how-to-use-r/</guid>
+      <description>Welcome to my blog. I will share my experience here. </description>
+    </item>
     <item>
       <title>My First1 Post</title>
       <link>https://chenjs1986.github.io/archives/test2/</link>
@@ -25,11 +32,19 @@ I will use the blog to record my work and some knowleage.
 I will use the blog to record my work and some knowleage.</description>
     </item>
     <item>
-      <title>Welcome!!</title>
-      <link>https://chenjs1986.github.io/posts/1/</link>
-      <pubDate>Mon, 02 Oct 2023 12:00:00 +0000</pubDate>
-      <guid>https://chenjs1986.github.io/posts/1/</guid>
-      <description></description>
+      <title>Four method </title>
+      <link>https://chenjs1986.github.io/posts/ifrs17-four-method/</link>
+      <pubDate>Thu, 01 Aug 2024 00:00:00 +0000</pubDate>
+      <guid>https://chenjs1986.github.io/posts/ifrs17-four-method/</guid>
+      <description>this is a post test</description>
+    </item>
+    <item>
+      <title>How to use python</title>
+      <link>https://chenjs1986.github.io/posts/python-how-to-use-python/</link>
+      <pubDate>Mon, 01 Jan 2024 00:00:00 +0000</pubDate>
+      <guid>https://chenjs1986.github.io/posts/python-how-to-use-python/</guid>
+      <description>post 中第2篇文章 2023-10-01
+C:\Users\dj010675\chenjs1986.github.io\frankblog\content\posts</description>
     </item>
     <item>
       <title>My First Post</title>
@@ -37,21 +52,6 @@ I will use the blog to record my work and some knowleage.</description>
       <pubDate>Sun, 01 Oct 2023 12:00:00 +0000</pubDate>
       <guid>https://chenjs1986.github.io/archives/test1/</guid>
       <description>this is a post test</description>
-    </item>
-    <item>
-      <title>My First Post</title>
-      <link>https://chenjs1986.github.io/posts/second/</link>
-      <pubDate>Sun, 01 Oct 2023 12:00:00 +0000</pubDate>
-      <guid>https://chenjs1986.github.io/posts/second/</guid>
-      <description>this is a post test</description>
-    </item>
-    <item>
-      <title>My Second Post</title>
-      <link>https://chenjs1986.github.io/posts/2/</link>
-      <pubDate>Sun, 01 Oct 2023 12:00:00 +0000</pubDate>
-      <guid>https://chenjs1986.github.io/posts/2/</guid>
-      <description>post 中第2篇文章 2023-10-01
-C:\Users\dj010675\chenjs1986.github.io\frankblog\content\posts</description>
     </item>
   </channel>
 </rss>
