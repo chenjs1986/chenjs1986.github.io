@@ -12,8 +12,18 @@
     <generator>Hugo -- 0.133.1</generator>
     <language>en</language>
     <copyright>PaperMod Contributors</copyright>
-    <lastBuildDate>Wed, 04 Sep 2024 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 05 Sep 2024 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://chenjs1986.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>The database I used</title>
+      <link>https://chenjs1986.github.io/posts/database-1.-the-database-i-used/</link>
+      <pubDate>Thu, 05 Sep 2024 00:00:00 +0000</pubDate>
+      <guid>https://chenjs1986.github.io/posts/database-1.-the-database-i-used/</guid>
+      <description>I used two main database. One is Mysql,anther is Sqlserver.
+Early, Mysql is the best choice for me. It&amp;rsquo;s silent and friendly. A financial personal database were builded by it. I downloaded data from CS/BS client and import it into Mysql.
+Then I wrote many sql-language script to get many statements or reports quickly. It&amp;rsquo;s saving much of time for me.
+Now,I use sqlserver to manage huge data because of Mysql support huge data poorly.</description>
+    </item>
     <item>
       <title>HOW TO USE R</title>
       <link>https://chenjs1986.github.io/posts/r-how-to-use-r/</link>
