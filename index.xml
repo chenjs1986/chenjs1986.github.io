@@ -20,7 +20,7 @@
       <pubDate>Thu, 05 Sep 2024 00:00:00 +0000</pubDate>
       <guid>https://chenjs1986.github.io/posts/database-1.-the-database-i-used/</guid>
       <description>I used two main database. One is Mysql,anther is Sqlserver.
-Early, Mysql is the best choice for me. It&amp;rsquo;s silent and friendly. A financial personal database were builded by it. I downloaded data from CS/BS client and import it into Mysql.
+Early, Mysql is the best choice for me. It&amp;rsquo;s handy and friendly. A financial personal database were builded by it. I downloaded data from CS/BS client and import it into Mysql.
 Then I wrote many sql-language script to get many statements or reports quickly. It&amp;rsquo;s saving much of time for me.
 Now,I use sqlserver to manage huge data because of Mysql support huge data poorly.</description>
     </item>
