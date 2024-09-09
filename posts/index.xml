@@ -26,34 +26,18 @@ Now,I use sqlserver to manage huge data because of Mysql support huge data poorl
     </item>
     <item>
       <title>HOW TO USE R</title>
-      <link>https://chenjs1986.github.io/posts/r-1.-why-i-use-r/</link>
+      <link>https://chenjs1986.github.io/posts/r-1.-what-to-do-with-r/</link>
       <pubDate>Wed, 04 Sep 2024 00:00:00 +0000</pubDate>
-      <guid>https://chenjs1986.github.io/posts/r-1.-why-i-use-r/</guid>
+      <guid>https://chenjs1986.github.io/posts/r-1.-what-to-do-with-r/</guid>
       <description>Welcome to my blog. I will share my experience here. Built in 108 ms Environment: &amp;ldquo;development&amp;rdquo; Serving pages from disk Running in Fast Render Mode. For full rebuilds on change: hugo server &amp;ndash;disableFastRender Web Server is available at http://localhost:1313/ (bind address 127.0.0.1) Press Ctrl+C to stop
 Change detected, rebuilding site (#1). 2024-09-05 11:56:49.907 +0800 Source changed /posts/r-how-to-use-r.md~rf55abb9d9.tmp Source changed /posts/r-how-to-use-r.md WARN found no layout file for &amp;ldquo;css&amp;rdquo; for kind &amp;ldquo;home&amp;rdquo;: You should create a template file which matches Hugo Layouts Lookup Rules for this combination.</description>
     </item>
     <item>
-      <title>HOW TO USE R</title>
-      <link>https://chenjs1986.github.io/posts/r-2.some-example/</link>
-      <pubDate>Wed, 04 Sep 2024 00:00:00 +0000</pubDate>
-      <guid>https://chenjs1986.github.io/posts/r-2.some-example/</guid>
-      <description>Welcome to my blog. I will share my experience here. Built in 108 ms Environment: &amp;ldquo;development&amp;rdquo; Serving pages from disk Running in Fast Render Mode. For full rebuilds on change: hugo server &amp;ndash;disableFastRender Web Server is available at http://localhost:1313/ (bind address 127.0.0.1) Press Ctrl+C to stop
-Change detected, rebuilding site (#1). 2024-09-05 11:56:49.907 +0800 Source changed /posts/r-how-to-use-r.md~rf55abb9d9.tmp Source changed /posts/r-how-to-use-r.md WARN found no layout file for &amp;ldquo;css&amp;rdquo; for kind &amp;ldquo;home&amp;rdquo;: You should create a template file which matches Hugo Layouts Lookup Rules for this combination.</description>
-    </item>
-    <item>
-      <title>Four method </title>
+      <title>IFRS17-Four method </title>
       <link>https://chenjs1986.github.io/posts/irfs17-1.introduce/</link>
       <pubDate>Thu, 01 Aug 2024 00:00:00 +0000</pubDate>
       <guid>https://chenjs1986.github.io/posts/irfs17-1.introduce/</guid>
       <description>this is a post test</description>
-    </item>
-    <item>
-      <title>How to use python</title>
-      <link>https://chenjs1986.github.io/posts/python-1.why-i-use-python/</link>
-      <pubDate>Mon, 01 Jan 2024 00:00:00 +0000</pubDate>
-      <guid>https://chenjs1986.github.io/posts/python-1.why-i-use-python/</guid>
-      <description>post 中第2篇文章 2023-10-01
-C:\Users\dj010675\chenjs1986.github.io\frankblog\content\posts</description>
     </item>
   </channel>
 </rss>
