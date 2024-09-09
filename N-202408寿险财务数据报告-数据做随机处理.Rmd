@@ -1,0 +1,4645 @@
+---
+title: "xxxx主要财务数据报告"
+output:
+  html_document:
+    fig_width: 12
+    fig_height: 6
+    toc: true
+    toc_float: 
+      collapsed: false
+      smooth_scroll: false
+    number_sections: false
+    theme: readable
+    toc_depth: 2
+---
+
+```{=html}
+ 
+```
+<!-- 定义参数 -->
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE, results='asis'}
+##定义生成报表的月份###暂不支持13和14期间的数据
+zyear = 2024
+zmonth = 8
+cat(paste("数据期间：" ,zyear, "年", zmonth, "月"))
+#定义数据抽取的限制YYYYMM# zyearmonth = 202312
+##资产负债瀑布图截断
+zstar = 6500
+zend  = 8600
+##图片路径
+adrr1 = 'D:/R/'
+###报表标题cat(paste("大家人寿主要财务数据报告(截至", zyear, "年", zmonth, "月)",sep = ""))  
+```
+
+<!-- library包 -->
+
+```{r   echo = FALSE ,  message = FALSE , warning = FALSE }
+#library
+#install_phantomjs()
+library(devtools)
+library(ggplot2)  
+library(DBI)  # 连接到SQL Server数据库  
+library(waterfalls)
+library(ggsignif)
+library(gghalves)
+library(ggalluvial)
+library(sqldf)
+library(ggthemes)
+library(gsubfn)
+library(proto)
+library(RSQLite)
+library(patchwork)
+library(knitr)  
+library(kableExtra)
+library(treemapify)
+library(tweenr)
+library(gganimate)
+library(RColorBrewer)
+library(tidyverse)
+library(writexl)  
+library(treemap)
+library(igraph)
+library(ggsankey)
+library(ggrepel)##添加箱型图异常值标签
+library(dplyr)  
+library(scales)
+library(magrittr) 
+# install.packages("remotes")
+# remotes::install_github("davidsjoberg/ggsankey",type="binary")
+# devtools::install_github('davidsjoberg/ggsankey')
+# install.packages("remap")
+library(remap)#导入REmap包
+#devtools::install_github("badbye/baidumap")
+#library(baidumap)#导入baidumap包
+library(stringr)  
+#桑基图
+library(dplyr)  
+library(networkD3)  
+library(htmlwidgets)
+library(DT) 
+library(RSelenium) 
+library(ggplot2)
+library(plotly)
+library(htmlwidgets)
+##生成图表的前缀日期
+flag =  paste(zyear,zmonth,as.numeric(now()),sep = "")
+# print(flag)
+```
+
+<!-- 基础数据准备-预算datays -->
+
+```{r   echo = FALSE ,  message = FALSE , warning = FALSE}
+  con <- dbConnect(odbc::odbc(), driver = "SQL Server", server = "10.10.9.57,1433",   
+                   database = "DJSX", uid = "admin", pwd = "admin")  
+  # 执行SQL查询并将结果保存到数据框中    
+  datays <- dbGetQuery( con,  paste( "SELECT  aa.[会计年度] as 会计年度 ,  aa.[会计期间]*1  as 会计期间 ,aa.[科目],aa.一级科目  as 一级科目  ,  
+  concat(bb.[二级科目],bb.总账科目长文本1) as 二级科目  ,
+aa.[产品],aa.[产品描述],aa.[渠道],aa.[渠道描述], aa.[预算科目] ,aa.[预算科目描述] ,aa.[公司代码], aa.[公司描述] ,aa.成本中心,
+case 
+when  aa.预算科目 like 'A901%' THEN '低值易耗品'
+when  aa.预算科目 like 'E602%' THEN '业务费用'
+when  aa.预算科目 like 'E603%' THEN '人力成本'
+when  aa.预算科目 like 'E604%' THEN '职场费用'
+when  aa.预算科目 like 'E605%' THEN '折旧摊销'
+when  aa.预算科目 like 'E601%' THEN 'IT费用'
+when  aa.预算科目 like 'E607%' THEN '日常费用'
+when  aa.预算科目 like 'E601%' THEN 'IT费用'
+else '其他' end as 预算大类,
+case 
+when aa.公司代码  like '20%'  then  '总公司'
+when aa.公司代码  like '211%'  then  '北京'
+when aa.公司代码  like '212%'  then  '天津'
+when aa.公司代码  like '213%'  then  '河北'
+when aa.公司代码  like '214%'  then  '山西'
+when aa.公司代码  like '221%'  then  '辽宁'
+when aa.公司代码  like '222%'  then  '吉林'
+when aa.公司代码  like '223%'  then  '黑龙江'
+when aa.公司代码  like '231%'  then  '上海'
+when aa.公司代码  like '232%'  then  '江苏'
+when aa.公司代码  like '233%'  then  '浙江'
+when aa.公司代码  like '234%'  then  '安徽'
+when aa.公司代码  like '236%'  then  '江西'
+when aa.公司代码  like '237%'  then  '山东'
+when aa.公司代码  like '241%'  then  '河南'
+when aa.公司代码  like '242%'  then  '湖北'
+when aa.公司代码  like '243%'  then  '湖南'
+when aa.公司代码  like '244%'  then  '广东'
+when aa.公司代码  like '247%'  then  '深圳'
+when aa.公司代码  like '251%'  then  '四川'
+else '其他' end as 分公司,
+                            round(sum(aa.[年初余额]) ,2) as  年初余额  ,
+                            round(sum(aa.[期初余额]) ,2) as  期初余额  ,
+                            round(sum(aa.[本期借方金额]) ,2) as  本期借方金额  ,
+                            round(sum(aa.[本期贷方金额]) ,2) as  本期贷方金额  ,
+                            round(sum(aa.[本期余额]) ,2) as  本期余额  ,
+                            round(sum(aa.[期末余额]) ,2) as  期末余额
+                              FROM [DJSX].[dbo].[balance_test] as aa
+                              left join  [DJSX].[dbo].[SAP科目层级配置] as bb
+                              on aa.[科目] = bb.[总账科目]
+                              where aa.[科目] like '6601%'    and  ( aa.[会计年度]   = " , zyear , " or aa.[会计年度]   = " , zyear-1  , ")
+                              group  by aa.[会计年度],  aa.[会计期间]  ,aa.[科目], 
+                              aa.一级科目  ,    concat(bb.[二级科目],bb.总账科目长文本1) ,
+aa.[产品],aa.[产品描述],aa.[渠道],aa.[渠道描述] , aa.[预算科目] ,aa.[预算科目描述]  ,aa.[公司代码], aa.[公司描述],aa.成本中心,case 
+when  aa.预算科目 like 'A901%' THEN '低值易耗品'
+when  aa.预算科目 like 'E602%' THEN '业务费用'
+when  aa.预算科目 like 'E603%' THEN '人力成本'
+when  aa.预算科目 like 'E604%' THEN '职场费用'
+when  aa.预算科目 like 'E605%' THEN '折旧摊销'
+when  aa.预算科目 like 'E601%' THEN 'IT费用'
+when  aa.预算科目 like 'E607%' THEN '日常费用'
+when  aa.预算科目 like 'E601%' THEN 'IT费用'
+else '其他' end ,  case 
+when aa.公司代码  like '20%'  then  '总公司'
+when aa.公司代码  like '211%'  then  '北京'
+when aa.公司代码  like '212%'  then  '天津'
+when aa.公司代码  like '213%'  then  '河北'
+when aa.公司代码  like '214%'  then  '山西'
+when aa.公司代码  like '221%'  then  '辽宁'
+when aa.公司代码  like '222%'  then  '吉林'
+when aa.公司代码  like '223%'  then  '黑龙江'
+when aa.公司代码  like '231%'  then  '上海'
+when aa.公司代码  like '232%'  then  '江苏'
+when aa.公司代码  like '233%'  then  '浙江'
+when aa.公司代码  like '234%'  then  '安徽'
+when aa.公司代码  like '236%'  then  '江西'
+when aa.公司代码  like '237%'  then  '山东'
+when aa.公司代码  like '241%'  then  '河南'
+when aa.公司代码  like '242%'  then  '湖北'
+when aa.公司代码  like '243%'  then  '湖南'
+when aa.公司代码  like '244%'  then  '广东'
+when aa.公司代码  like '247%'  then  '深圳'
+when aa.公司代码  like '251%'  then  '四川'
+else '其他' end
+order by 一级科目") )
+  #定义作图的年月
+  #print(datays)
+  #############################特殊会计期间调整为12
+  # if (zmonth > 12) {  
+  #   zmonth <- 12   
+  # }
+```
+
+# 
+
+# 一、保险业务类变动、资产负债和利润表变动表
+
+## （一）资产负债指标数据
+
+（单位:亿元）
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=TRUE , results='asis' }
+  # 执行SQL查询并将结果保存到数据框中 ---2721030100独立账户负债-其他应付款-资金划拨 有重分类
+ 
+  zsql <- paste(
+    "select 会计年度 , 会计期间*1 as 会计期间  ,  '1总资产' as 一级科目 , sum(年初余额)/100000000 as 年初余额 , sum(期末余额)/100000000 as 期末余额  
+  from [DJSX].[dbo].[balance_test]   
+  where  会计年度 = " , zyear , " and 会计期间 = ", zmonth ," and ( 科目 like '1%' or 科目 =  '2721030100'  )   
+  group  by 会计年度 , 会计期间 "
+    , "union all",
+    "select 会计年度 , 会计期间*1 as 会计期间 ,  '2总负债' as 一级科目 , - sum(年初余额)/100000000 as 年初余额 , - sum(期末余额)/100000000 as 期末余额  
+  from [DJSX].[dbo].[balance_test] 
+  where 会计年度 =  " , zyear , " and 会计期间 = ", zmonth  ," and 科目   like '2%' and 科目 <>  '2721030100' 
+  group  by 会计年度 , 会计期间 "
+    , "union all",
+    "select 会计年度 , 会计期间*1 as 会计期间 ,  '3所有者权益' as 一级科目, - sum(年初余额)/100000000 as 年初余额 , - sum(期末余额)/100000000 as 期末余额  
+  from [DJSX].[dbo].[balance_test] 
+  where 会计年度 =  " , zyear , " and 会计期间 = ", zmonth  ,"  and ( 科目 like '4%'  or 科目 like '6%'  or 科目 like '9%' )
+  group  by 会计年度 , 会计期间 " )
+  data <- dbGetQuery( con,zsql)  
+  
+  data <- sqldf(paste( "select  一级科目 , sum( case when 会计年度 = ", zyear ," and 会计期间 =" , zmonth,"  then  期末余额  else 0 end)  as 期末余额 ,
+                sum( case when 会计年度 = ", zyear  ,"  and 会计期间 = ", zmonth ," then 年初余额  else 0 end)  as 年初余额 
+                from data  group by 一级科目"  ))
+  
+  data1 <- sqldf(paste( "select  一级科目 ,  round(年初余额,2) AS 年初余额 ,   round(期末余额,2) AS 期末余额 ,  round((期末余额/年初余额 -1)*100, 2)  as '同比增长%' from data  group by 一级科目"  ))
+  
+  data1 %>% 
+    kbl(caption = ""  ,border_box_size = 1 , format  = "html", booktabs = TRUE) %>%
+    kable_classic (full_width = F, html_font = "Cambria" , font_size = 19 , position = "left" )
+```
+
+## （二）利润类指标数据
+
+（单位:亿元）
+
+```{r   echo = FALSE , message = FALSE , warning = FALSE , results='asis'}
+  ##利润类
+ 
+  zsql <- paste(
+    "select 会计年度 , 会计期间 ,  '2保费收入' as 一级科目 , - sum(本期余额)/100000000 as 期末余额  
+  from [DJSX].[dbo].[balance_test]   where  会计年度 in ( " , zyear , "," , zyear -1 ,")" ,"and 会计期间 <= " , zmonth ,  " and 科目 like '6031%' 
+  group  by 会计年度 , 会计期间 "
+    , "union all",
+    "select 会计年度 , 会计期间 ,  '3赔付支出' as 一级科目 ,   sum(本期余额)/100000000 as 期末余额  
+  from [DJSX].[dbo].[balance_test] 
+  where 会计年度 in ( " , zyear , "," , zyear -1 ,")" ,"and 会计期间  <= " , zmonth ,  " and 科目 like '6511%' 
+  group  by 会计年度 , 会计期间 "
+    , "union all",
+    "select 会计年度 , 会计期间 ,  '4退保支出' as 一级科目 ,  sum(本期余额)/100000000 as 期末余额  
+  from [DJSX].[dbo].[balance_test] 
+  where 会计年度 in ( ", zyear , "," , zyear -1 ,")" ,"and 会计期间  <= " , zmonth ,  " and ( 科目 like '6531%'    )
+  group  by 会计年度 , 会计期间 " 
+    , "union all",
+    "select 会计年度 , 会计期间 ,  '1净利润' as 一级科目 ,  - sum(本期余额)/100000000 as 期末余额  
+  from [DJSX].[dbo].[balance_test] 
+  where 会计年度 in ( ", zyear , "," , zyear -1 ,")" ,"and 会计期间  <= " , zmonth ,  " and ( 科目 like '6%'    )
+  group  by 会计年度 , 会计期间 " )
+  data <- dbGetQuery( con,zsql)  
+  # print(zyear)
+  data <- sqldf(paste( "select  一级科目 , sum( case when 会计年度 = ", zyear ," and 会计期间 <= " , zmonth,"  then  期末余额  else 0 end)  as 本年余额 ,
+                sum( case when 会计年度 = ", zyear -1 ,"  and 会计期间  <= " , zmonth," then 期末余额  else 0 end)  as 上年同期 
+                from data  group by 一级科目"  ))
+  data2 <- sqldf(paste( "select  一级科目 ,   round(本年余额,2) AS  本年余额   , round(上年同期,2) AS   上年同期   , round((本年余额/上年同期 -1)*100, 2)  as '同比增长%' from data " ))
+  #
+  data2 %>% 
+    kbl(caption = ""  ,border_box_size = 1 , format  = "html") %>%
+    kable_classic (full_width = F, html_font = "Cambria" , font_size = 19 , position = "left" )
+ 
+```
+
+## （三）投资收益率指标数据
+
+```{r   echo = FALSE , message = FALSE , warning = FALSE , results='asis'}
+ 
+  ############################################################月、年
+  zsql <- paste(" SELECT 会计年度*1 as 会计年度 ,会计期间*1 as 会计期间 ,  
+sum( case when 科目 like '1%' then  年初余额  else 0 end ) as 总资产年初余额  , 
+sum( case when 科目 like '1%' then  期初余额  else 0 end ) as 总资产期初余额  , 
+sum( case when 科目 like '1%' then  期末余额  else 0 end ) as 总资产期末余额  , 
+sum( case when 科目 between '4000000000' and '6ZZZZZZZZZ'  then  - 年初余额  else 0 end ) as 净资产年初余额  , 
+sum( case when 科目 between '4000000000' and '6ZZZZZZZZZ'  then  - 期初余额  else 0 end ) as 净资产期初余额  , 
+sum( case when 科目 between '4000000000' and '6ZZZZZZZZZ'  then  - 期末余额  else 0 end ) as 净资产期末余额  , 
+sum( case when 科目  like '6%'  then  - 本期余额  else 0 end ) as 净利润本期余额  , 
+sum( case when 科目  like '6%'  then  - 期末余额  else 0 end ) as 净利润期末余额  
+FROM  [DJSX].[dbo].[balance_test]  
+where ( [会计年度] =  " , zyear," or [会计年度] = ",  zyear  -1 ,"  ) 
+and [会计期间] = " , zmonth ," 
+group by 会计年度,会计期间")
+  data3 <- dbGetQuery( con,zsql)    
+  
+  zsql <- paste("
+ select 
+'净资产收益率ROE' as 收益率 , 
+round(
+sum( case when 会计年度 = " , zyear   ,"  and  会计期间 = " , zmonth ,"  then 净利润本期余额 else 0 end )/
+(sum( case when 会计年度 = " , zyear   ,"  and  会计期间 = " , zmonth ,"  then 净资产期初余额 else 0 end )/2 + sum( case when 会计年度 = " , zyear," and  会计期间 = " , zmonth ,"  then 净资产期末余额 else 0 end )/2 ),4) as 本月,
+round(
+sum( case when 会计年度 = " , zyear   ," and  会计期间 = " , zmonth ,"  then 净利润期末余额 else 0 end )/
+(sum( case when 会计年度 = " , zyear   ," and  会计期间 = " , zmonth ,"  then 净资产年初余额 else 0 end )/2 + sum( case when 会计年度 = " , zyear," and  会计期间 = " , zmonth ,"  then 净资产期末余额 else 0 end )/2 ),4) as 本年累计,
+round(
+sum( case when 会计年度 = " , zyear -1 ,"   and  会计期间 = " , zmonth ,"  then 净利润本期余额 else 0 end )/
+(sum( case when 会计年度 = " , zyear -1 ,"   and  会计期间 = " , zmonth ,"  then 净资产期初余额 else 0 end )/2 + sum( case when 会计年度 = " , zyear -1 ," and  会计期间 = " , zmonth ,"  then 净资产期末余额 else 0 end )/2 ),4) as 上年本月,
+round(
+sum( case when 会计年度 = " , zyear -1 ,"  and  会计期间 = " , zmonth ,"  then 净利润期末余额 else 0 end )/
+(sum( case when 会计年度 = " , zyear -1 ,"   and  会计期间 = " , zmonth ,"  then 净资产年初余额 else 0 end )/2 + sum( case when 会计年度 = " , zyear -1 ," and  会计期间 = " , zmonth ,"  then 净资产期末余额 else 0 end )/2 ),4) as 上年累计
+ from data3
+ union all 
+ select 
+'总资产收益率ROA' as 收益率, 
+round(
+sum( case when 会计年度 = " , zyear,"  and  会计期间 = " , zmonth ,"  then 净利润本期余额 else 0 end )/
+(sum( case when 会计年度 = " , zyear," and  会计期间 =  " , zmonth ,"   then 总资产期初余额 else 0 end )/2 + sum( case when 会计年度 = " , zyear," and  会计期间 = " , zmonth ,"  then 总资产期末余额 else 0 end )/2 ),4) as 本月,
+round(
+sum( case when 会计年度 = " , zyear,"  and  会计期间 = " , zmonth ,"   then 净利润期末余额 else 0 end )/
+(sum( case when 会计年度 = " , zyear,"  and  会计期间 =  " , zmonth ,"  then 总资产年初余额 else 0 end )/2 + sum( case when 会计年度 = " , zyear," and  会计期间 = " , zmonth ,"  then 总资产期末余额 else 0 end )/2 ),4) as 本年累计,
+round(
+sum( case when 会计年度 = " , zyear -1 ,"    and  会计期间 =  " , zmonth ,"   then 净利润本期余额 else 0 end )/
+(sum( case when 会计年度 = " , zyear -1 ,"  and  会计期间 =  " , zmonth ,"   then 总资产期初余额 else 0 end )/2 + sum( case when 会计年度 = " , zyear -1 ," and  会计期间 = " , zmonth ,"  then 总资产期末余额 else 0 end )/2 ),4) as 上年本月,
+round(
+sum( case when 会计年度 = " , zyear -1 ,"   and  会计期间 = " , zmonth ,"  then 净利润期末余额 else 0 end )/
+(sum( case when 会计年度 = " , zyear -1 ,"   and  会计期间 = " , zmonth ,"  then 总资产年初余额 else 0 end )/2 + sum( case when 会计年度 = " , zyear -1 ," and  会计期间 = " , zmonth ,"  then 总资产期末余额 else 0 end )/2 ),4) as 上年累计
+ from data3 " )
+  data3 <- sqldf(zsql )
+  
+  
+  ############################################################季度
+  zsqlquar <- paste("
+SELECT 会计年度,会计期间*1 as 会计期间,  
+sum( case when 科目 like '1%' and  会计期间 =  ", zmonth -2 ," then  期初余额  else 0 end ) as 总资产季度初余额  , 
+sum( case when 科目 like '1%' and  会计期间 =  ", zmonth  ," then  期末余额  else 0 end )   as 总资产季度末余额  , 
+sum( case when 科目 between '4000000000' and '6ZZZZZZZZZ' and  会计期间 =  ", zmonth -2 ,"  then  - 期初余额  else 0 end ) as 净资产季度初余额  , 
+sum( case when 科目 between '4000000000' and '6ZZZZZZZZZ' and  会计期间 =  ", zmonth  ,"then  - 期末余额  else 0 end ) as 净资产季度末余额  , 
+sum( case when 科目 like '6%' and  会计期间 between ", zmonth -2 ," and  ", zmonth ," then  - 本期余额  else 0 end ) as 净利润季度余额  
+FROM  [DJSX].[dbo].[balance_test]  
+where ( [会计年度] =  " , zyear," or [会计年度] = ",  zyear  -1 ," ) 
+group by 会计年度,会计期间 ")
+  data3quar <- dbGetQuery( con,zsqlquar )  
+  
+  # print(data3quar)
+  zsqlquarb <- paste("
+ select 
+'净资产收益率ROE' as 收益率 , 
+---------------------------季度
+case when " , zmonth  , " in (03,06,09,12) then 
+round(
+sum( case when 会计年度 = " , zyear   ,"  and  会计期间 between  " , zmonth - 2 ," and ", zmonth   ,"  then 净利润季度余额 else 0 end )/
+(sum( case when 会计年度 = " , zyear   ,"  and  会计期间 = " , zmonth -2 ,"  then 净资产季度初余额 else 0 end )/2 + sum( case when 会计年度 = " , zyear," and  会计期间 = " , zmonth ,"  then 净资产季度末余额 else 0 end )/2 ),4)  else 0 end    as 本季,
+---------------------------季度
+case when  " , zmonth  , " in(03,06,09,12) then 
+round(
+sum( case when 会计年度 = " , zyear -1 ,"   and  会计期间 between " , zmonth - 2 ," and ", zmonth ,"  then 净利润季度余额 else 0 end )/
+(sum( case when 会计年度 = " , zyear -1 ,"   and  会计期间 = " , zmonth -2 ,"  then 净资产季度初余额 else 0 end )/2 + sum( case when 会计年度 = " , zyear -1 ," and  会计期间 = " , zmonth ,"  then 净资产季度末余额 else 0 end )/2 ),4) else 0 end    as 上年本季
+ from data3quar
+ union all 
+ -------------------------------------------------------------------------------------------------------------------------------
+ select 
+'总资产收益率ROA' as 收益率, 
+---------------------------季度
+case when  " , zmonth  , " in(03,06,09,12) then 
+round(
+sum( case when 会计年度 = " , zyear,"  and  会计期间 between " , zmonth - 2 ," and ", zmonth   ,"  then 净利润季度余额 else 0 end )/
+(sum( case when 会计年度 = " , zyear," and  会计期间 =  " , zmonth -2 ,"   then 总资产季度初余额 else 0 end )/2 + sum( case when 会计年度 = " , zyear," and  会计期间 = " , zmonth ,"  then 总资产季度末余额 else 0 end )/2 ),4) else 0 end     as 本季,
+---------------------------季度
+case when  " , zmonth  , " in(03,06,09,12) then 
+round(
+sum( case when 会计年度 = " , zyear -1 ,"    and  会计期间 between " , zmonth - 2 ," and ", zmonth ,"   then 净利润季度余额 else 0 end )/
+(sum( case when 会计年度 = " , zyear -1 ,"  and  会计期间 =  " , zmonth -2 ,"   then 总资产季度初余额 else 0 end )/2 + sum( case when 会计年度 = " , zyear -1 ," and  会计期间 = " , zmonth ,"  then 总资产季度末余额 else 0 end )/2 ),4) else 0 end    as 上年本季 
+ from data3quar " )
+  data3quarb <- sqldf(zsqlquarb )
+ 
+  
+  # 合并两个数据框  
+  data3out <- cbind(data3, data3quarb[, -1])    
+  # print(data3)
+  ##排列顺序
+  data3out <- data3out[, c("收益率","本月", "本季", "本年累计","上年本月", "上年本季", "上年累计")] 
+  library(scales)
+  library(dplyr)  
+  data3out <- data3out %>%  
+    mutate(本月 = percent(`本月`, accuracy = 0.01)) # 假设您想要将'数值列名'列转换为百分比
+  data3out <- data3out %>%   
+    mutate(本季 = percent(本季, accuracy = 0.01)) # 假设您想要将'数值列名'列转换为百分比
+  data3out <- data3out %>%   
+    mutate(本年累计 = percent(本年累计 , accuracy = 0.01)) # 假设您想要将'数值列名'列转换为百分比
+  data3out <- data3out %>%  
+    mutate(上年本月 = percent(上年本月 , accuracy = 0.01)) # 假设您想要将'数值列名'列转换为百分比
+  data3out <- data3out %>%  
+    mutate(上年本季 = percent(上年本季 , accuracy = 0.01)) # 假设您想要将'数值列名'列转换为百分比
+  data3out <- data3out %>%  
+    mutate(上年累计 = percent(上年累计 , accuracy = 0.01)) # 假设您想要将'数值列名'列转换为百分比
+  
+  
+  data3out %>% 
+    kbl(caption = ""  ,border_box_size = 1 , format  = "html") %>%
+    kable_classic (full_width = F, html_font = "Cambria" , font_size = 19 , position = "left" ) %>%
+    add_header_above(c(" " = 1, "本年" = 3, "上年" = 3))
+ 
+```
+
+注：1.净资产收益率ROE=净利润/(期初净资产+期末净资产)/2；
+
+2.总资产收益率ROE=净利润/(期初总资产+期末总资产)/2；
+
+3.由于净资产目前为负，请注意指标计算值的适用性；
+
+4.月度不生成季度指标。
+
+# 二、财务类数据分析
+
+## （一）资产、负债及所有者权益变动
+
+### 1.1资产变动瀑布图-本年
+
+```{r echo=FALSE,   message=FALSE, warning=FALSE}
+  zsql<- sprintf( "select '0总资产年初' as 一级科目, sum(年初余额)/100000000 as 本期余额  
+                    from [DJSX].[dbo].[balance_test] 
+                    where 会计年度 = %d and  会计期间 =  '01' and substring(一级科目,1,1)   = '1'
+                    union all
+                    select   一级科目, sum(本期余额)/100000000 as 本期余额  from [DJSX].[dbo].[balance_test]    
+                    where 会计年度 =  %d
+                    and  会计期间 between   '01'  and   %d      
+                    and substring(一级科目,1,1)   = '1'
+                    group by 一级科目   " , zyear,zyear,zmonth )
+  data21<- dbGetQuery( con,zsql)  
+  data21 <- sqldf( "select case when abs(本期余额) < 1 then 'other' else 一级科目 end as 一级科目 , round(sum(本期余额),2) as 本期余额    
+                from data21 group by case when abs(本期余额) < 1 then 'other' else 一级科目 end  order by 一级科目 ")
+  p21 <- waterfall(values = data21$本期余额  ,
+                   labels = gsub("[0-9]", "", data21$一级科目)     , #标签
+                   rect_width = 0.5 ,
+                   rect_text_size = 1 ,
+                   # rect_text_labels_anchor = "top",
+                   draw_axis.x = "behind",
+                   calc_total = T,#是否显示终值
+                   total_rect_color = "pink",#终值填充色
+                   total_rect_border_color = "white",
+                   draw_lines = T,#是否显示矩形间的连线
+                   linetype = 2,#矩形间连线类型
+                   rect_border = "white",#矩形边框颜色
+                   fill_by_sign = T,#正值及负值是否具有相同颜色
+                   total_rect_text_color = "black",#终值标签颜色
+                   total_rect_text = sum(data21$本期余额),
+                   total_axis_text='期末总资产') +#终值标签设置
+    theme_grey()+#主题
+    #   scale_y_continuous(limits = c(7000, 8000 ) , breaks = seq(0, zmat, by = 100)) + # 
+    theme(axis.text.x = element_text(angle = 15, hjust = 1, vjust = .5 ,  size = 10 )) + 
+    theme(axis.text.y = element_text(angle = 0, hjust = 1, vjust = .5 ,  size = 10 )) + 
+    # coord_cartesian(ylim = c(6000, 7000)) +
+    labs(x= "",y="变动", title = "本年（单位:亿元）")  #轴标题
+  
+  zsql<- sprintf( "select '0总资产期初' as 一级科目, sum(期初余额)/100000000 as 本期余额  
+                    from [DJSX].[dbo].[balance_test] 
+                    where 会计年度 = %d and  会计期间 = %d and substring(一级科目,1,1)   = '1'
+                    union all
+                    select   一级科目, sum(本期余额)/100000000 as 本期余额  from [DJSX].[dbo].[balance_test]    
+                    where 会计年度 =  %d
+                    and  会计期间  =  %d      
+                    and substring(一级科目,1,1)   = '1'
+                    group by 一级科目   " , zyear,zmonth ,zyear,zmonth )
+  data22<- dbGetQuery( con,zsql)  
+  data22 <- sqldf( "select case when abs(本期余额) < 1 then 'other' else 一级科目 end as 一级科目 , round(sum(本期余额),2) as 本期余额    
+                from data22 group by case when abs(本期余额) < 1 then 'other' else 一级科目 end  order by 一级科目 ")
+  
+  # ZFIN = paste( '期末总资产--' ,  sum(data1$本期余额))
+  p22 <- waterfall(values = data22$本期余额  ,
+                   labels = gsub("[0-9]", "", data22$一级科目)     , #标签
+                   rect_width = 0.5 ,
+                   rect_text_size = 1  ,
+                   # rect_text_labels_anchor = "top",
+                   draw_axis.x = "behind",
+                   calc_total = T,#是否显示终值
+                   total_rect_color = "pink",#终值填充色
+                   total_rect_border_color = "white",
+                   draw_lines = T,#是否显示矩形间的连线
+                   linetype = 2,#矩形间连线类型
+                   rect_border = "white",#矩形边框颜色
+                   fill_by_sign = T,#正值及负值是否具有相同颜色
+                   total_rect_text_color = "black",#终值标签颜色
+                   total_rect_text = sum(data22$本期余额),
+                   total_axis_text= '期末总资产'   ) +#终值标签设置
+    theme_grey()+#主题
+    theme(axis.text.x = element_text(angle = 15, hjust = 1, vjust = .5 ,  size = 10 )) + 
+    theme(axis.text.y = element_text(angle = 0, hjust = 1, vjust = .5 ,  size = 10 )) + 
+    # coord_cartesian(ylim = c(6000, 7000)) +
+    labs(x= "",y="变动", title = "本月（单位:亿元）")         #去除轴标题
+  
+  # p1 <-  p1  +  ylim(c(7200, 7400))   
+  # p2 <-  p1  +  ggplot(data2 ) +
+  #               geom_point(aes(x = 一级科目, y = 本期余额))  
+  # ggsave(paste(flag ,"p21.png"), plot = p21 , width = 12, height = 12, dpi = 300)
+  # picname = paste(flag ,"p21.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+
+  p21 <- ggplotly( p21 )
+  p21
+ 
+```
+
+### 1.2 资产变动瀑布图-本月
+
+```{r echo=FALSE  , message=FALSE}
+  # ggsave(paste(flag ,"p22.png"), plot =   p22, width = 8, height = 4, dpi = 150)
+  # picname = paste(flag ,"p22.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+   
+  p22 <- ggplotly( p22 )
+  p22
+```
+
+### 2.1负债和所有者权限变动瀑布图-本年
+
+```{r echo = FALSE , message = FALSE , warning = FALSE}
+  zsql<- sprintf( "select '0总负债及权益年初' as 一级科目,   sum(年初余额)/100000000 as 本期余额  
+                    from [DJSX].[dbo].[balance_test] 
+                    where 会计年度 = %d and  会计期间 =  '01' and substring(一级科目,1,1)   = '1'
+                    union all
+                    select   一级科目, - sum(本期余额)/100000000 as 本期余额  from [DJSX].[dbo].[balance_test]    
+                    where 会计年度 =  %d
+                    and  会计期间 between   '01'  and   %d      
+                    and substring(一级科目,1,1)  <>  '1'
+                    group by 一级科目   " , zyear,zyear,zmonth )
+  data1<- dbGetQuery( con,zsql)  
+  data1 <- sqldf( "select 
+                    case 
+                    when substr(一级科目,1,1) = '6' then '6净利润'
+                    when abs(本期余额) < 1 and substr(一级科目,1,1) <> '6' then 'other' 
+                    else 一级科目 end as '一级科目' , round(sum(本期余额),2) as 本期余额    
+                from data1 group by case 
+                    when abs(本期余额) < 1 and substr(一级科目,1,1) <> '6' then 'other' 
+                    when substr(一级科目,1,1)= '6' then '6净利润'
+                    else 一级科目 end ")
+  p31 <- waterfall(values = data1$本期余额  ,
+                   labels = gsub("[0-9]", "", data1$一级科目)     , #标签
+                   rect_width = 0.5 ,
+                   rect_text_size = 1  ,
+                   # rect_text_labels_anchor = "top",
+                   draw_axis.x = "behind",
+                   calc_total = T,#是否显示终值
+                   total_rect_color = "pink",#终值填充色
+                   total_rect_border_color = "white",
+                   draw_lines = T,#是否显示矩形间的连线
+                   linetype = 2,#矩形间连线类型
+                   rect_border = "white",#矩形边框颜色
+                   fill_by_sign = T,#正值及负值是否具有相同颜色
+                   total_rect_text_color = "black",#终值标签颜色
+                   total_rect_text = sum(data1$本期余额),
+                   total_axis_text='期末总负债及权益') +#终值标签设置
+    theme_grey()+#主题
+    theme(axis.text.x = element_text(angle = 15, hjust = 1, vjust = .5 ,  size = 10 )) + 
+    theme(axis.text.y = element_text(angle = 0, hjust = 1, vjust = .5 ,  size = 10 )) + 
+   # coord_cartesian(ylim = c(6000, 8000)) +
+    labs(x= "",y="变动" , title = "本年（单位:亿元）")  #轴标题)#去除轴标题
+  
+  # p1 <-  p1  +  ylim(c(7200, 7400))   
+  # p2 <-  p1  +  ggplot(data2 ) +
+  #               geom_point(aes(x = 一级科目, y = 本期余额))  
+  # ggsave(paste(flag ,"p31.png"), plot =p31, width = 8, height = 4, dpi = 150)
+  # picname = paste(flag ,"p31.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+  p31 <- ggplotly( p31 )
+  p31
+```
+
+### 2.2负债和所有者权益变动瀑布图-本月
+
+```{r echo = FALSE ,   message = FALSE, warning = FALSE}
+  zsql<- sprintf( "select '0总负债及权益期初' as 一级科目, sum(期初余额)/100000000 as 本期余额  
+                    from [DJSX].[dbo].[balance_test] 
+                    where 会计年度 = %d and  会计期间 = %d and substring(一级科目,1,1)   = '1'
+                    union all
+                    select   一级科目, - sum(本期余额)/100000000 as 本期余额  from [DJSX].[dbo].[balance_test]    
+                    where 会计年度 =  %d
+                    and  会计期间  =  %d      
+                    and substring(一级科目,1,1)  <>  '1'
+                    group by 一级科目       
+                    order by 一级科目  " , zyear,zmonth ,zyear,zmonth )
+  data1<- dbGetQuery( con,zsql)  
+  data1 <- sqldf( "select case 
+                    when substr(一级科目,1,1) = '6' then '6净利润'
+                    when abs(本期余额) < 1 and substr(一级科目,1,1) <> '6' then 'other' 
+                    else 一级科目 end as '一级科目'  , round(sum(本期余额),2) as 本期余额    
+                from data1 group by case 
+                    when substr(一级科目,1,1) = '6' then '6净利润'
+                    when abs(本期余额) < 1 and substr(一级科目,1,1) <> '6' then 'other' 
+                    else 一级科目 end  ")
+  
+  p32 <- waterfall(values = data1$本期余额  ,
+                   labels = gsub("[0-9]", "", data1$一级科目)     , #标签
+                   rect_width = 0.5 ,
+                   rect_text_size = 1  ,
+                   # rect_text_labels_anchor = "top",
+                   draw_axis.x = "behind",
+                   calc_total = T,#是否显示终值
+                   total_rect_color = "pink",#终值填充色
+                   total_rect_border_color = "white",
+                   draw_lines = T,#是否显示矩形间的连线
+                   linetype = 2,#矩形间连线类型
+                   rect_border = "white",#矩形边框颜色
+                   fill_by_sign = T,#正值及负值是否具有相同颜色
+                   total_rect_text_color = "black",#终值标签颜色
+                   total_rect_text = sum(data1$本期余额),
+                   total_axis_text='期末负债及权益') +#终值标签设置
+    #theme_tufte()+#主题
+    theme_grey()+#主题
+    theme(axis.text.x = element_text(angle = 15, hjust = 1, vjust = .5 ,  size = 10  )) + 
+    theme(axis.text.y = element_text(angle = 0, hjust = 1, vjust = .5 ,  size = 10 )) + 
+   # coord_cartesian(ylim = c(6000, 7500)) +
+    labs(x= "",y="变动", title = "本月（单位:亿元）")#去除轴标题
+  
+  # p1 <-  p1  +  ylim(c(7200, 7400))   
+  # p2 <-  p1  +  ggplot(data2 ) +
+  #               geom_point(aes(x = 一级科目, y = 本期余额)) 
+  # ggsave(paste(flag ,"p32.png"), plot =p32, width = 8, height = 4, dpi = 150)
+  # picname = paste(flag ,"p32.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+  
+   p32 <- ggplotly( p32 )
+   p32
+```
+
+## （二）利润变动
+
+### 3.1 净利润变动瀑布图-本年
+
+```{r echo = FALSE ,   message = FALSE, warning = FALSE}
+  zsql<- sprintf( "select '0净利润年初' as 一级科目,  - sum(年初余额)/100000000 as 本期余额  
+                    from [DJSX].[dbo].[balance_test] 
+                    where 会计年度 = %d and  会计期间 =  '01' and substring(一级科目,1,1)   = '6'
+                    union all
+                    select   一级科目, - sum(本期余额)/100000000 as 本期余额  from [DJSX].[dbo].[balance_test]    
+                    where 会计年度 =  %d
+                    and  会计期间 between   '01'  and   %d      
+                    and substring(一级科目,1,1)  =  '6'
+                    group by 一级科目
+                    order by 一级科目  " , zyear,zyear,zmonth )
+  data1<- dbGetQuery( con,zsql)  
+  data1 <- sqldf( "select case when abs(本期余额) < 1 then 'other' else 一级科目 end as 一级科目 , round(sum(本期余额),2) as 本期余额    
+                from data1 group by case when abs(本期余额) < 1 then 'other' else 一级科目 end ")
+  p41 <- waterfall(values = data1$本期余额  ,
+                   labels = gsub("[0-9]", "", data1$一级科目)     , #标签
+                   rect_width = 0.5 ,
+                   rect_text_size = 1  ,
+                   # rect_text_labels_anchor = "top",
+                   draw_axis.x = "behind",
+                   calc_total = T,#是否显示终值
+                   total_rect_color = "pink",#终值填充色
+                   total_rect_border_color = "white",
+                   draw_lines = T,#是否显示矩形间的连线
+                   linetype = 2,#矩形间连线类型
+                   rect_border = "white",#矩形边框颜色
+                   fill_by_sign = T,#正值及负值是否具有相同颜色
+                   total_rect_text_color = "black",#终值标签颜色
+                   total_rect_text = round(sum(data1$本期余额),2),
+                   total_axis_text='期末净利润') +#终值标签设置
+    theme_grey()+#主题
+    theme(axis.text.x = element_text(angle = 15, hjust = 1, vjust = .5 ,  size = 10 )) + 
+    theme(axis.text.y = element_text(angle = 0, hjust = 1, vjust = .5 ,  size = 10 )) + 
+    # coord_cartesian(ylim = c(7200, 9000)) +
+    labs(x= "",y="变动", title = "本年（单位:亿元）")#去除轴标题
+  
+  # p1 <-  p1  +  ylim(c(7200, 7400))   
+  # p2 <-  p1  +  ggplot(data2 ) +
+  #               geom_point(aes(x = 一级科目, y = 本期余额))  
+  # ggsave(paste(flag ,"p41.png"), plot =p41, width = 8, height = 4, dpi = 150)
+  # picname = paste(flag ,"p41.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+ 
+    p41 <- ggplotly( p41 )
+   p41
+```
+
+### 3.2 净利润变动瀑布图-本月
+
+```{r echo = FALSE ,   message = FALSE, warning = FALSE}
+  zsql<- sprintf( "select '0净利润期初' as 一级科目, - sum(期初余额)/100000000 as 本期余额  
+                    from [DJSX].[dbo].[balance_test] 
+                    where 会计年度 = %d and  会计期间 = %d and substring(一级科目,1,1)   = '6'
+                    union all
+                    select   一级科目, - sum(本期余额)/100000000 as 本期余额  from [DJSX].[dbo].[balance_test]    
+                    where 会计年度 =  %d
+                    and  会计期间  =  %d      
+                    and substring(一级科目,1,1)  =  '6'
+                    group by 一级科目       
+                    order by 一级科目  " , zyear,zmonth ,zyear,zmonth )
+  data1<- dbGetQuery( con,zsql)  
+  data1 <- sqldf( "select case when abs(本期余额) < 1 then 'other' else 一级科目 end as 一级科目 , round(sum(本期余额),2) as 本期余额    
+                from data1 group by case when abs(本期余额) < 1 then 'other' else 一级科目 end ")
+  
+  p42 <- waterfall(values = data1$本期余额  ,
+                   labels = gsub("[0-9]", "", data1$一级科目)   , #标签
+                   rect_width = 0.5 ,
+                   rect_text_size = 1  ,
+                   rect_text_labels_anchor = "centre",
+                   draw_axis.x = "behind",
+                   calc_total = T,#是否显示终值
+                   total_rect_color = "pink",#终值填充色
+                   total_rect_border_color = "white",
+                   draw_lines = T,#是否显示矩形间的连线
+                   linetype = 2,#矩形间连线类型
+                   rect_border = "white",#矩形边框颜色
+                   fill_by_sign = T,#正值及负值是否具有相同颜色
+                   total_rect_text_color = "black",#终值标签颜色
+                   total_rect_text = round(sum(data1$本期余额),2),
+                   total_axis_text='期末净利润') +#终值标签设置
+    theme_grey()+#主题
+    theme(axis.text.x = element_text(angle = 15, hjust = 1, vjust = .5 ,  size = 10 )) + 
+    theme(axis.text.y = element_text(angle = 0, hjust = 1, vjust = .5 ,  size = 10 )) + 
+    # axis(1,at = p1 , labels = TRUE )  + 
+    # coord_cartesian(ylim = c(7200, 9000)) +
+    labs(x= "",y="变动", title = "本月（单位:亿元）")#去除轴标题
+  # p <-  p + ggplot_object_name = "4.2 净利润变动瀑布图-本月（单位:亿元）") +#主题
+  # p1 <-  p1  +  ylim(c(7200, 7400))   
+  # p2 <-  p1  +  ggplot(data2 ) +
+  #               geom_point(aes(x = 一级科目, y = 本期余额))  
+  # axis(side, at = NULL, labels = TRUE, tick = TRUE, line = NA,
+  #      pos = NA, outer = FALSE, font = NA, lty = "solid",
+  #      lwd = 1, lwd.ticks = lwd, col = NULL, col.ticks = NULL,
+  #      hadj = NA, padj = NA, gap.axis = NA, ...)
+  # ggsave(paste(flag ,"p42.png"), plot =p42, width = 8, height = 4, dpi = 150)
+  # picname = paste(flag ,"p42.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+    p42 <- ggplotly( p42 )
+   p42
+```
+
+### 3.3 净利润变动箱型图-本年
+
+```{r echo = FALSE ,  message = FALSE, warning = FALSE}
+  zsqis<- sprintf( "  select  case when abs(本期余额) < 1 then 'other' else 一级科目 end as 一级科目 ,会计期间,  - round(sum(本期余额/100000000),2)  as 本期余额  from [DJSX].[dbo].[balance_test]    
+                    where 会计年度 =  %d
+                    and  会计期间 between   '01'  and   %d      
+                    and substring(一级科目,1,1)  =  '6'
+                    group by case when abs(本期余额) < 1 then 'other' else 一级科目 end  ,会计期间   
+                    order by 一级科目 ,会计期间 " , zyear,zmonth )
+  data43 <- dbGetQuery( con,zsqis)  
+  datafiter <- sqldf("select 一级科目 , sum(本期余额) as 本期余额 from data43  group by 一级科目 ")
+  data43 <- sqldf("select * from data43 where 一级科目 in ( select 一级科目 from datafiter where abs(本期余额) > 1 )" )
+  
+  p43 = ggplot(data43, aes(x=一级科目, y=本期余额)) + 
+    geom_boxplot()+
+    theme(axis.text.x = element_text(angle = 15, hjust = 1, vjust = .5 ,  size = 10 )) +
+    labs(x= "",y="", title = "本年各月变动（单位:亿元）")+ #去除轴标题
+    stat_summary(fun.y = mean, geom = "point", shape = 23, size=4)  + 
+    geom_boxplot(fill = "pink", color = "black")
+  # ggsave(paste(flag ,"p43.png"), plot =p43, width = 8, height = 4, dpi = 150)
+  # picname = paste(flag ,"p43.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+ 
+     p43 <- ggplotly( p43 )
+     p43
+```
+
+### 4.1 资产负债构成树状图-本年
+
+（单位:亿元）
+
+```{r echo = FALSE , message = FALSE, warning = FALSE}
+  #####资产
+  zsql<- sprintf( "select 一级科目, sum(期末余额)/100000000 as 期末余额  
+                    from [DJSX].[dbo].[balance_test]    
+                    where 会计年度 =  %d
+                    and  会计期间 =  %d      
+                    and substring(一级科目,1,1)   = '1'
+                    group by 一级科目       
+                    order by 一级科目  " , zyear,zmonth )
+  data51<- dbGetQuery( con,zsql)  
+data51 <- sqldf( "select '资产' as 项目 , case when abs(期末余额) < 1 then 'other' else 一级科目 end as 一级科目 , round(sum(期末余额),2) as 期末余额    
+                from data51 
+                group by case when abs(期末余额) < 1 then 'other' else 一级科目 end ")
+  
+  # p51 <- ggplot(data51, aes(area = 期末余额,  label = 一级科目, fill = gsub("[0-9]", "", data51$一级科目) )) +
+    # geom_treemap(  layout = "squarified") +
+    # geom_treemap_text(grow = F, reflow = T, colour = "black"  ) +
+    # theme(legend.position = "none") + #隐藏示例图例
+    # labs( title = "资产构成", # caption = "资产构成1",
+          # fill = "" ) +
+    # theme(legend.position = "none", plot.caption=element_text(hjust=0)) 
+p51 <- plot_ly(data51, 
+             ids = ~一级科目, 
+             labels = ~一级科目, 
+             parents = ~项目,  
+             values = ~期末余额, 
+             type = 'treemap', 
+             textinfo = 'label+value' )
+
+p51
+
+ 
+  #####负债
+  zsql<- sprintf( "select  case 
+                    when substring(一级科目,1,1) = '6' OR substring(一级科目,1,1) = '4'  then '6所有者权益'
+                    else 一级科目 end as '一级科目', - sum(期末余额)/100000000 as 期末余额  
+                    from [DJSX].[dbo].[balance_test]    
+                    where 会计年度 =  %d
+                    and  会计期间 =  %d      
+                    and substring(一级科目,1,1)  = '2'
+                    group by 一级科目       
+                    order by 一级科目  " , zyear,zmonth )
+  data52<- dbGetQuery( con,zsql)  
+  data52 <- sqldf( "select '负债' as 项目  , case when abs(期末余额)  <  1 then 'other' else 一级科目 end as 一级科目 , round(sum(期末余额),2) as 期末余额
+                from data52
+                group by case when abs(期末余额)  < 1 then 'other' else 一级科目 end ")
+
+
+  # p52 <- ggplot(data52, aes(area = 期末余额,   label = 一级科目 , fill = gsub("[0-9]", "", data52$一级科目) )) +
+  #   geom_treemap() +
+  #   geom_treemap_text(grow = F, reflow = T, colour = "black" ) +
+  #   labs(
+  #     title = "负债构成",
+  #     # caption = "负债和所有者权益构成",
+  #     fill = "" ) +
+  #   theme(legend.position = "none", plot.caption=element_text(hjust=0)) 
+  # 
+  # ggsave(paste(flag ,"p51.png"), plot = p51+ p52 , width = 8, height = 5, dpi = 120)
+  # picname = paste(flag ,"p51.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+ 
+p52 <- plot_ly(data52, 
+               ids = ~一级科目, 
+               labels = ~一级科目, 
+               parents = ~项目,  
+               values = ~期末余额, 
+               type = 'treemap', 
+               textinfo = 'label+value' )
+
+p52
+ 
+```
+
+## （三）银行存款变动
+
+### 5.1 银行存款变动瀑布图-本年
+
+(包括1002银行存款和1021结算备付金)
+
+```{r echo = FALSE ,   message = FALSE, warning = FALSE}
+  zsql<- sprintf( "select '0银行存款年初' as 银行名称, sum(年初余额) as 本期余额  
+                    from [DJSX].[dbo].[balance_test] 
+                    where 会计年度 = %d and  会计期间 =  '01' and  ( substring(科目,1,4) = '1002' or  substring(科目,1,4) = '1021')
+                    union all
+                    select   银行名称, sum(本期余额) as 本期余额  from [DJSX].[dbo].[balance_test]    
+                    where 会计年度 =  %d
+                    and  会计期间 between   '01'  and   %d      
+                    and  ( substring(科目,1,4) = '1002' or  substring(科目,1,4) = '1021')
+                    group by 银行名称       
+                    order by 本期余额  " , zyear,zyear,zmonth )
+  data71<- dbGetQuery( con,zsql)  
+  
+  data71 <- sqldf( "select case when abs(本期余额/100000000) < 1 then '小于壹亿银行' else 银行名称 end as 银行名称 , round(sum(本期余额/100000000),2) as 本期余额    
+                from data71 group by case when abs(本期余额/100000000) < 1 then '小于壹亿银行' else 银行名称 end   ")
+  
+  
+  p71 <- waterfall(values = data71$本期余额  ,
+                   labels = gsub("[0-9]", "", data71$银行名称)     , #标签
+                   rect_width = 0.5 ,
+                   rect_text_size = 1  ,
+                   # rect_text_labels_anchor = "top",
+                   draw_axis.x = "behind",
+                   calc_total = T,#是否显示终值
+                   total_rect_color = "pink",#终值填充色
+                   total_rect_border_color = "white",
+                   draw_lines = T,#是否显示矩形间的连线
+                   linetype = 2,#矩形间连线类型
+                   rect_border = "white",#矩形边框颜色
+                   fill_by_sign = T,#正值及负值是否具有相同颜色
+                   total_rect_text_color = "black",#终值标签颜色
+                   total_rect_text = sum(data71$本期余额),
+                   total_axis_text='期末银行存款') +#终值标签设置
+    theme_grey()+ # 默认背景，浅灰色背景和白色网格线，无边框 
+    theme(axis.text.x = element_text(angle = 15, hjust = 1, vjust = .5 ,  size = 10 )) + 
+    theme(axis.text.y = element_text(angle = 0, hjust = 1, vjust = .5 ,  size = 10 )) + 
+    #  coord_cartesian(ylim = c(0, 1000)) +
+    labs(x= "",y="变动", title = "本年（单位:亿元）")  #轴标题
+  # ggsave(paste(flag ,"p71.png"), plot =p71, width = 8, height = 4, dpi = 150)
+  # picname = paste(flag ,"p71.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+     p71 <- ggplotly( p71 )
+     p71
+ 
+```
+
+### 5.2 银行存款变动瀑布图-本月
+
+(包括1002银行存款和1021结算备付金)
+
+```{r echo = FALSE ,  message = FALSE, warning = FALSE}
+  zsql<- sprintf( "select '0银行存款期初' as 银行名称, sum(期初余额) as 本期余额  
+                    from [DJSX].[dbo].[balance_test] 
+                    where 会计年度 = %d and  会计期间 =   %d  and  ( substring(科目,1,4) = '1002' or  substring(科目,1,4) = '1021')
+                    union all
+                    select   银行名称, sum(本期余额) as 本期余额  from [DJSX].[dbo].[balance_test]    
+                    where 会计年度 =  %d   
+                    and  会计期间  =  %d      
+                    and  ( substring(科目,1,4) = '1002' or  substring(科目,1,4) = '1021')
+                    group by 银行名称       
+                    order by 本期余额  " , zyear,zmonth ,zyear,zmonth )
+  data72<- dbGetQuery( con,zsql)  
+  
+  data72 <- sqldf( "select case when abs(本期余额/100000000) < 1 then '小于壹亿银行' else 银行名称 end as 银行名称 , round(sum(本期余额/100000000),2) as 本期余额 
+                  from data72 group by case when abs(本期余额/100000000) < 1 then '小于壹亿银行' else 银行名称 end   ")
+  # print(data72)
+  p72 <- waterfall(values = data72$本期余额  ,
+                   labels = gsub("[0-9]", "", data72$银行名称)     , #标签
+                   rect_width = 0.5 ,
+                   rect_text_size = 1  ,
+                   # rect_text_labels_anchor = "top",
+                   draw_axis.x = "behind",
+                   calc_total = T,#是否显示终值
+                   total_rect_color = "pink",#终值填充色
+                   total_rect_border_color = "white",
+                   draw_lines = T,#是否显示矩形间的连线
+                   linetype = 2,#矩形间连线类型
+                   rect_border = "white",#矩形边框颜色
+                   fill_by_sign = T,#正值及负值是否具有相同颜色
+                   total_rect_text_color = "black",#终值标签颜色
+                   total_rect_text = sum(data72$本期余额),
+                   total_axis_text='期末银行存款') +#终值标签设置
+    theme_grey()+ # 默认背景，浅灰色背景和白色网格线，无边框 
+    theme(axis.text.x = element_text(angle = 15, hjust = 1, vjust = .5 ,  size = 10 )) + 
+    theme(axis.text.y = element_text(angle = 0, hjust = 1, vjust = .5 ,  size = 10 )) + 
+    #  coord_cartesian(ylim = c(0, 1000)) +
+    labs(x= "",y="变动", title = "本月（单位:亿元）")  #轴标题
+  # ggsave(paste(flag ,"p72.png"), plot =p72, width = 8, height = 4, dpi = 150)
+  # picname = paste(flag ,"p72.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+ 
+      p72 <- ggplotly( p72 )
+     p72
+```
+
+## （四）保费收入结构分析
+
+## 6.1 保费收入渠道分布-新单
+
+```{r   echo = FALSE , message = FALSE, warning = FALSE}
+  zsqln <- paste("select 会计年度 , 会计期间 , - sum(本期余额)/100000000 as 本月新增 ,
+              case 
+              when 渠道  = '101001' then '个人代理'
+              when 渠道  like  '102%' then '公司直销'
+              when 渠道  like  '103%' then '银邮代理'
+              when 渠道  = '104001' then '专业代理'
+              when 渠道  = '104002' then '保险经纪'
+              when 渠道  = '104003' then '电话销售'
+              when 渠道  = '104004' then '网上销售'
+              else 渠道描述 end as 销售渠道 
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and 科目 like '603101%' 
+              group  by 会计年度 , 会计期间, case 
+              when 渠道  = '101001' then '个人代理'
+              when 渠道  like  '102%' then '公司直销'
+              when 渠道  like  '103%' then '银邮代理'
+              when 渠道  = '104001' then '专业代理'
+              when 渠道  = '104002' then '保险经纪'
+              when 渠道  = '104003' then '电话销售'
+              when 渠道  = '104004' then '网上销售'
+              else 渠道描述 end
+              order by 会计期间 ")
+  data111 <- dbGetQuery( con,zsqln)  
+  # print(data121)
+  zsqlo <- paste("select 会计年度 , 会计期间 , - sum(本期余额)/100000000 as 本月新增 ,
+              case 
+              when 渠道  = '101001' then '个人代理'
+              when 渠道  like  '102%' then '公司直销'
+              when 渠道  like  '103%' then '银邮代理'
+              when 渠道  = '104001' then '专业代理'
+              when 渠道  = '104002' then '保险经纪'
+              when 渠道  = '104003' then '电话销售'
+              when 渠道  = '104004' then '网上销售'
+              else 渠道描述 end as 销售渠道 
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  ,  "and 会计期间 <= " ,zmonth , "
+              and ( 科目 like  '603101%'  or 科目 like '27111010%'    or 科目 in ('2711060000'  ,'2721010100','2721010400'))
+              group  by 会计年度 , 会计期间, case 
+              when 渠道  = '101001' then '个人代理'
+              when 渠道  like  '102%' then '公司直销'
+              when 渠道  like  '103%' then '银邮代理'
+              when 渠道  = '104001' then '专业代理'
+              when 渠道  = '104002' then '保险经纪'
+              when 渠道  = '104003' then '电话销售'
+              when 渠道  = '104004' then '网上销售'
+              else 渠道描述 end
+              having sum(本期余额) <> 0
+              order by 会计期间  ")
+  data112 <- dbGetQuery( con,zsqlo)   
+  #绘图
+  p111 <- ggplot(data111,  aes(x = as.character(会计期间), y = 本月新增,fill = 销售渠道 )) +  
+    geom_bar(stat = "identity" , width = 0.6 ,position = "stack") +  
+    # geom_col(fill="orange") +
+    scale_y_continuous(limits = c(0, 200), breaks = seq(0, 400, by = 50)) +
+    labs(x = "会计期间",  y = "本月新增（单位:亿元）" , title = "新准则各期保费收入（新单）" )  +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    theme_grey() 
+  # geom_text(aes(label = 本月新增), vjust = 1.5, colour = "black")
+  
+  p112 <- ggplot(data112,  aes(x = as.character(会计期间), y = 本月新增,fill = 销售渠道 )) +  
+    geom_bar(stat = "identity" , width = 0.6 ,position = "stack") +  
+    # geom_col(fill="orange") +
+    scale_y_continuous(limits = c(0, 200), breaks = seq(0, 400, by = 50)) +
+    labs(x = "会计期间",  y = "本月新增（单位:亿元）" , title = "旧准则各期保费收入（新单）" )  +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    theme_grey() 
+  # geom_text(aes(label = 本月新增), vjust = 1.5, colour = "black")
+  # p <- p + geom_point()  
+  # theme_minimal() # 可选：添加主题样式  
+  
+  # ggsave(paste(flag ,"p11.png"), plot = p111 + p112, width = 8, height = 4, dpi = 150)
+  # picname = paste(flag ,"p11.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+     p111 <- ggplotly( p111 )
+     p111
+     p112 <- ggplotly( p112 )
+     p112    
+     
+ # p111 + p112
+```
+
+## 6.2 保费收入机构分布-新单
+
+```{r   echo = FALSE    , message = FALSE, warning = FALSE}
+  zsqln <- paste("select 会计年度 , 会计期间 , - sum(本期余额)/100000000 as 本月新增 ,分公司
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and 科目 like '603101%' 
+              group  by 会计年度 , 会计期间, 分公司
+              order by 会计期间 ")
+  data1110 <- dbGetQuery( con,zsqln)  
+  # print(data121)
+  zsqlo <- paste("select 会计年度 , 会计期间 , - sum(本期余额)/100000000 as 本月新增 ,分公司
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  ,  "and 会计期间 <= " ,zmonth , "
+              and ( 科目 like  '603101%'  or 科目 like '2711100000%'  or 科目 like '2711101010%' or 科目 in ('2711060000'  ,'2721010100','2721010400'))
+              group  by 会计年度 , 会计期间, 分公司
+              order by 会计期间 ")
+  data1120 <- dbGetQuery( con,zsqlo)   
+  #绘图
+  p1110 <- ggplot(data1110,  aes(x = 分公司, y = 本月新增  ,fill = as.character(会计期间))) +  ###首月需要删除,fill = 会计期间
+    geom_bar(stat = "identity" , width = 0.6 ,position = "stack") +  
+    # geom_col(fill="orange") +
+    scale_y_continuous(limits = c(0, 50), breaks = seq(0, 150, by = 50)) +
+    theme(axis.text.x = element_text(angle = 25, hjust = 1, vjust = .5 ,  size = 10 )) + 
+    # scale_fill_brewer(palette = "Spectral")  +
+    ###调小示例图
+    theme(legend.text = element_text(size = 6), legend.title = element_text(size = 10))+
+    labs(x = "",  y = "本月新增（单位:亿元）" , title = "新准则机构保费收入（新单）" ) # +
+  # geom_text(aes(label = 本月新增), vjust = 1.5, colour = "black")
+  
+   zsqln <- paste("select  - sum(本期余额)/100000000   as money ,分公司  as  company 
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and 科目 like '603101%' 
+              group  by   分公司 
+               ")
+  datanew <- dbGetQuery( con,zsqln)  
+ 
+ p1 <- plot_ly(datanew, 
+             ids = datanew$company, 
+             labels = datanew$company, 
+             parents = "新准则新单保费", 
+             values = datanew$money, 
+             type = 'treemap', 
+             textinfo = 'label+value+percent entry' )
+ 
+  
+  
+   
+  
+  
+  
+  
+  
+  p1120 <- ggplot(data1120,  aes(x = 分公司, y = 本月新增  ,fill = as.character(会计期间))) +   ###首月需要删除,fill = 会计期间
+    geom_bar(stat = "identity" , width = 0.6 ,position = "stack") +  
+    # geom_col(fill="orange") +
+    scale_y_continuous(limits = c(0, 50), breaks = seq(0, 150, by = 50)) +
+    theme(axis.text.x = element_text(angle = 25, hjust = 1, vjust = .5 ,  size = 10 )) + 
+    #  scale_fill_brewer(palette = "Spectral")  +
+    theme(legend.text = element_text(size = 6), legend.title = element_text(size = 10))+
+    labs(x = "",  y = "本月新增（单位:亿元）" , title = "旧准则机构保费收入（新单）" ) #  +
+  # geom_text(aes(label = 本月新增), vjust = 1.5, colour = "black")
+  # p <- p + geom_point()  
+  # theme_minimal() # 可选：添加主题样式  
+  # ggsave(paste(flag ,"p1110.png"), plot = p1110 , width = 8, height = 4, dpi = 150)
+  # picname = paste(flag ,"p1110.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+   
+  
+   zsqlo <- paste("select  - sum(本期余额)/100000000   as money ,分公司  as  company 
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+               and ( 科目 like  '603101%'  or 科目 like '2711100000%'  or 科目 like '2711101010%' or 科目 in ('2711060000'  ,'2721010100','2721010400'))
+              group  by   分公司 
+               ")
+  dataold <- dbGetQuery( con,zsqlo)  
+ 
+ p1old <- plot_ly(dataold, 
+             ids = dataold$company, 
+             labels = dataold$company, 
+             parents = "旧准则新单保费", 
+             values = dataold$money, 
+             type = 'treemap', 
+             textinfo = 'label+value+percent entry' )
+  
+  
+     p1110 <- ggplotly( p1110 )
+     p1110   
+     p1 <- ggplotly( p1 )
+     p1   
+ 
+     p1120 <- ggplotly( p1120 )
+     p1120    
+     p1old <- ggplotly( p1old )
+     p1old   
+```
+
+ 
+## 6.4 保费收入-渠道分布-新单+续期
+
+```{r   echo = FALSE  ,   message = FALSE, warning = FALSE}
+  zsqln <- paste("select 会计年度 , 会计期间 , - sum(本期余额)/100000000 as 本月新增 ,
+              case 
+              when 渠道  = '101001' then '个人代理'
+              when 渠道  like  '102%' then '公司直销'
+              when 渠道  like  '103%' then '银邮代理'
+              when 渠道  = '104001' then '专业代理'
+              when 渠道  = '104002' then '保险经纪'
+              when 渠道  = '104003' then '电话销售'
+              when 渠道  = '104004' then '网上销售'
+              else 渠道 end as 销售渠道 
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and 科目 like '6031%' 
+              group  by 会计年度 , 会计期间, case 
+              when 渠道  = '101001' then '个人代理'
+              when 渠道  like  '102%' then '公司直销'
+              when 渠道  like  '103%' then '银邮代理'
+              when 渠道  = '104001' then '专业代理'
+              when 渠道  = '104002' then '保险经纪'
+              when 渠道  = '104003' then '电话销售'
+              when 渠道  = '104004' then '网上销售'
+              else 渠道 end
+              order by 会计期间 ")
+  data121 <- dbGetQuery( con,zsqln)  
+  # print(data121)
+  zsqlo <- paste("select 会计年度 , 会计期间 , - sum(本期余额)/100000000 as 本月新增 ,
+              case 
+              when 渠道  = '101001' then '个人代理'
+              when 渠道  like  '102%' then '公司直销'
+              when 渠道  like  '103%' then '银邮代理'
+              when 渠道  = '104001' then '专业代理'
+              when 渠道  = '104002' then '保险经纪'
+              when 渠道  = '104003' then '电话销售'
+              when 渠道  = '104004' then '网上销售'
+              else 渠道 end as 销售渠道 
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  ,  "and 会计期间 <= " ,zmonth , "
+              and ( 科目 like  '6031%'  or 科目 like '271110%' or 科目 in ('2711060000'  ,'2721010100','2721010400'))
+              group  by 会计年度 , 会计期间, case 
+              when 渠道  = '101001' then '个人代理'
+              when 渠道  like  '102%' then '公司直销'
+              when 渠道  like  '103%' then '银邮代理'
+              when 渠道  = '104001' then '专业代理'
+              when 渠道  = '104002' then '保险经纪'
+              when 渠道  = '104003' then '电话销售'
+              when 渠道  = '104004' then '网上销售'
+              else 渠道 end
+              order by 会计期间 ")
+  data122 <- dbGetQuery( con,zsqlo)   
+  # print(data122)
+  # print(data)
+  
+  ##绘图  
+  p121 <- ggplot(data121,  aes( x = as.character(会计期间), y = 本月新增, fill = 销售渠道 )) +  
+    geom_bar(stat = "identity" , width = 0.6 ,position = "stack") +  
+    # geom_col(fill="orange") +
+    scale_fill_brewer(palette = "Paired")  +
+    scale_y_continuous(limits = c(0, 350), breaks = seq(0, 400, by = 50)) +
+    labs(x = "会计期间",  y = "本月新增（单位:亿元）" , title = "新准则各期保费收入（新单+续期）" ) #  +
+  # theme(axis.text.x = element_blank( )) 
+  # print(p121)
+  # geom_text(aes(label = 本月新增), vjust = 1.5, colour = "black")
+  
+  
+  p122 <- ggplot(data122,  aes(x = as.character(会计期间), y = 本月新增,fill = 销售渠道 )) +  
+    geom_bar(stat = "identity" , width = 0.6 ,position = "stack") +  
+    # geom_col(fill="orange") +
+    scale_fill_brewer(palette = "Paired")  +
+    scale_y_continuous(limits = c(0, 350), breaks = seq(0, 400, by = 50)) +
+    labs(x = "会计期间",  y = "本月新增（单位:亿元）" , title = "旧准则各期保费收入（新单+续期）" ) # +
+  # theme(axis.text.x = element_blank( ))
+  # geom_text(aes(label = 本月新增), vjust = 1.5, colour = "black")
+  # p <- p + geom_point()  
+  # theme_minimal() # 可选：添加主题样式  
+  # print(p121 + p122)
+  # ggsave(paste(flag ,"p12.png"), plot = p121 + p122, width = 8, height = 4, dpi = 150)
+  # picname = paste(flag ,"p12.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+  
+ 
+     p121 <- ggplotly( p121 )
+     p121   
+     p122 <- ggplotly( p122 )
+     p122   
+```
+
+## 6.5 保费收入-产品分布（10亿以上）
+
+（单位：亿元）
+
+```{r echo = FALSE  , fig.height= 7, fig.width= 9  ,message = FALSE , warning = FALSE}
+  #   ,out.width  = 25 , out.height = 10
+  #旧准则-首期
+  zsqlo1 <- paste("select 会计年度 ,  - sum(本期余额)/100000000 as 本年新增 ,产品描述
+              from [DJSX].[dbo].[balance_test] 
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and ( 科目 like  '603101%'  or 科目 like '2711100000%' or 科目 like '2711101010%'  )
+              group  by 会计年度 ,  产品描述  ")
+  data1311 <- dbGetQuery( con,zsqlo1)   
+  zsqlo1 <- paste("select 会计年度 ,round( sum(本年新增),2) as 本年新增 , case when abs(本年新增) > 10 then  产品描述  else '其他产品' end as  产品描述  from data1311  group  by 会计年度 ,  产品描述     order by sum(本年新增) ")
+  data1311 <- sqldf(zsqlo1)  
+  # data1311 <- sqldf("select 会计年度 ,本年新增,replace(replace(replace(replace(replace(replace(产品描述,'寿险',''),'安邦',''),'保险',''),'（分红型）','-分红'),'（万能型）','-万能'),'大家','') as 产品描述 from data1311 order by  本年新增 desc ")
+  data1311$产品描述 = reorder(data1311$产品描述, data1311$本年新增)
+  
+  # 生成图片  
+  # p1311 <- ggplot(data1311,  aes(x = 产品描述, y = 本年新增,fill = 产品描述 )) +  
+  #   geom_bar(stat = "identity" , width = 0.8 ,position = "stack" ) +
+  #   scale_y_continuous(limits = c(0, 200), breaks = seq(0, 200, by = 50)) +
+  #   # scale_x_discrete(labels = function(x) x) + # 将 x 轴标签显示为原始变量名
+  #   labs(x = "保险产品",  y = "本年新增" , title = "(1)主要产品首期保费收入（含万能）" )  +
+  #   theme_grey()+ #主题
+  #   theme(legend.position = "none") + #隐藏示例图例
+  #   #修改玫瑰图的展示
+  #   theme(axis.text.x = element_text(angle = 30, hjust = 2, vjust = .5 ,  size   = 12  ,color = "black",face="bold" ))  +
+  #   theme(axis.text = element_text(colour = "black", size = rel(0.5)))
+  #  geom_text(aes(label = 本月新增), vjust = 1.5, colour = "black")
+  #  scale_x_continuous(expand = c(0,0), limits = c(-300, 300)) + # 调整 x 轴范围  
+  #  theme(legend.position = "none") + #隐藏示例图例
+  # p1311 <- p1311 + coord_polar("y", start = pi/0.1  ) +
+         # theme(axis.text.y = element_text(size = 12))
+  
+  p <- plot_ly(
+  data1311, 
+  labels = ~产品描述, 
+  values = ~本年新增, 
+  type = 'pie', 
+  hole = 0, 
+  textinfo = "label+percent",
+  insidetextorientation = "radial"
+)
+p <- p %>% layout(
+  title = "主要产品首期保费收入（含万能）",
+  showlegend = TRUE,
+  autosize = FALSE,
+  # width = 500,
+  # height = 500,
+  margin = list(    l = 50,    r = 50,    b = 100,    t = 100,    pad = 4  ),
+  paper_bgcolor = "white",
+  plot_bgcolor = "white"
+)
+p
+   
+  
+  #旧准则-首续期
+  zsqlo <- paste("select 会计年度 ,  - sum(本期余额)/100000000 as 本年新增 ,产品描述
+              from [DJSX].[dbo].[balance_test] 
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and ( 科目 like  '6031%'  or 科目 like '271110%' or 科目 in ('2711060000'  ,'2721010100','2721010400'))
+              group  by 会计年度 ,  产品描述  ")
+  data131 <- dbGetQuery( con,zsqlo)   
+  zsqlo <- paste("select 会计年度 , sum(本年新增) as 本年新增 , case when abs(本年新增) > 10 then  产品描述  else '其他产品' end as  产品描述  from data131  group  by 会计年度 ,  产品描述     order by sum(本年新增) ")
+  data131 <- sqldf(zsqlo)  
+  # data131 <- sqldf("select 会计年度 ,本年新增,replace(replace(replace(replace(replace(replace(产品描述,'寿险',''),'安邦',''),'保险',''),'（分红型）','-分红'),'（万能型）','-万能'),'大家','') as 产品描述 from data131 ")
+  data131$产品描述 = reorder(data131$产品描述, data131$本年新增)   
+  # 生成图片  
+  # p131 <- ggplot(data131,  aes(x = 产品描述, y = 本年新增,fill = 产品描述 )) +
+  #   geom_bar(stat = "identity" , width = 0.6 ,position = "stack" ) +
+  #   scale_y_continuous(limits = c(0, 200), breaks = seq(0, 200, by = 50)) +
+  #   labs(x = "保险产品",  y = "本年新增" , title = "(2)主要产品首续期保费收入（含万能）" )  +
+  #   theme_grey()+#主题
+  #   theme(legend.position = "none") + #隐藏示例图例
+  #   #修改玫瑰图的展示
+  #   theme(axis.text.x = element_text(angle = 30, hjust = 2, vjust = .5 ,  size   = 12 ,color = "black",face="bold" )) +
+  #   theme(axis.text = element_text(colour = "black", size = rel(0.5)))
+  # # geom_text(aes(label = 本月新增), vjust = 1.5, colour = "black")
+  # p131 <- p131  +   coord_polar("y", start = pi/0.1)  +
+  #        theme(axis.text.y = element_text(size = 12))
+  
+   p <- plot_ly(
+  data131, 
+  labels = ~产品描述, 
+  values = ~本年新增, 
+  type = 'pie', 
+  hole = 0, 
+  textinfo = "label+percent",
+  insidetextorientation = "radial"
+)
+p <- p %>% layout(
+  title = "主要产品首续期保费收入（含万能）",
+  showlegend = TRUE,
+  autosize = FALSE,
+  # width = 500,
+  # height = 500,
+  margin = list(    l = 50,    r = 50,    b = 100,    t = 100,    pad = 4  ),
+  paper_bgcolor = "white",
+  plot_bgcolor = "white"
+)
+p
+  # ggsave(paste(flag ,"p1311.png"), plot =  p1311  , width = 8, height = 4, dpi = 150)
+  # picname = paste(flag ,"p1311.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+  # ggsave(paste(flag ,"p131.png"), plot =  p131  , width = 8, height = 4, dpi = 150)
+  # picname = paste(flag ,"p131.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+   
+ 
+```
+
+## 6.6 保费收入-缴费年期分布
+
+（单位：亿元）
+
+6.6.1 新准则新单保费收入-年期分布
+
+```{r echo = FALSE   , fig.height= 7, fig.width= 9  ,message = FALSE , warning = FALSE}
+  #   ,out.width  = 25 , out.height = 10
+  #新准则-首期
+  zsqlo1 <- paste("select 会计年度 ,  - sum(本期余额)/100000000 as 本年新增 ,缴费年期描述
+              from [DJSX].[dbo].[balance_test] 
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and ( 科目 like  '603101%' )
+              group  by 会计年度 ,  缴费年期描述  ")
+  data1411a <-  dbGetQuery( con,zsqlo1)   
+  zsqlo1 <- paste("select 会计年度 ,round( sum(本年新增),2) as 本年新增 , 缴费年期描述  from data1411a  group  by 会计年度 ,  缴费年期描述 having  sum(本年新增) > 0.01   order by sum(本年新增) ")
+  data1411a <- sqldf(zsqlo1)  
+  # data1311 <- sqldf("select 会计年度 ,本年新增,replace(replace(replace(replace(replace(replace(产品描述,'寿险',''),'安邦',''),'保险',''),'（分红型）','-分红'),'（万能型）','-万能'),'大家','') as 产品描述 from data1311 order by  本年新增 desc ")
+   data1411a$缴费年期描述 = paste(data1411a$缴费年期描述, ": ", data1411a$本年新增, " (", round(data1411a$本年新增/sum(data1411a$本年新增)*100, 2), "%)", sep="")
+
+  p <- plot_ly(
+  data1411a, 
+  labels = ~缴费年期描述, 
+  values = ~本年新增, 
+  type = 'pie', 
+  hole = 0, 
+  textinfo = "label",
+  insidetextorientation = "radial"
+)
+p <- p %>% layout(
+  title = "主要产品首期保费收入（含万能风险保费）",
+  showlegend = TRUE,
+  autosize = FALSE,
+  # width = 500,
+  # height = 500,
+  margin = list(    l = 50,    r = 50,    b = 100,    t = 100,    pad = 4  ),
+  paper_bgcolor = "white",
+  plot_bgcolor = "white"
+)
+p
+
+  # ggsave(paste(flag ,"p1411a.png"), plot =  p1411a  , width = 8, height = 4, dpi = 150)
+  # picname = paste(flag ,"p1411a.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+ 
+ 
+```
+
+6.6.2 旧准则新单保费收入-年期分布
+
+```{r echo = FALSE   , fig.height= 7, fig.width= 9  ,message = FALSE , warning = FALSE}
+  #   ,out.width  = 25 , out.height = 10
+  #新准则-首期
+  zsqlo1 <- paste("select 会计年度 ,  - sum(本期余额)/100000000 as 本年新增 ,缴费年期描述
+              from [DJSX].[dbo].[balance_test] 
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and ( [科目] in ('2711101010','2711101020')  or   ( [科目]  like '603101%' and  [产品描述] not like '%万能%' and  [产品描述] not like '%投资连结%' ) )
+              group  by 会计年度 ,  缴费年期描述  ")
+  data1411a <-  dbGetQuery( con,zsqlo1)   
+  zsqlo1 <- paste("select 会计年度 ,round( sum(本年新增),2) as 本年新增 , 缴费年期描述  from data1411a  group  by 会计年度 ,  缴费年期描述 having  sum(本年新增) > 0.01   order by sum(本年新增) ")
+  data1411a <- sqldf(zsqlo1)  
+ 
+  data1411a$缴费年期描述 = paste(data1411a$缴费年期描述, ": ", data1411a$本年新增, " (", round(data1411a$本年新增/sum(data1411a$本年新增)*100, 2), "%)", sep="")
+
+  p <- plot_ly(
+  data1411a, 
+  labels = ~缴费年期描述, 
+  values = ~本年新增, 
+  type = 'pie', 
+  hole = 0, 
+  textinfo = "label",
+  insidetextorientation = "radial"
+)
+p <- p %>% layout(
+  title = "主要产品首期规模保费",
+  showlegend = TRUE,
+  autosize = FALSE,
+  # width = 500,
+  # height = 500,
+  margin = list(    l = 50,    r = 50,    b = 100,    t = 100,    pad = 4  ),
+  paper_bgcolor = "white",
+  plot_bgcolor = "white"
+)
+p
+
+ 
+```
+
+## 6.7 保费收入-旧准则投资设计、缴费年期与首续期-桑基图
+
+（单位：亿元）
+
+```{r echo=FALSE  , fig.height= 7, fig.width= 9 ,  message=FALSE, warning=FALSE}
+zsql <- paste("select   [缴费年期描述] as 缴费年期,
+              [缴费年期描述] ,
+              [设计类型描述], 
+              CASE 
+              WHEN 科目描述 LIKE '%续期%' then '续期'
+              WHEN 科目描述 LIKE '%期交%' then '新单期交'
+              WHEN 科目描述 LIKE '%趸交%' then '新单趸交'             
+              else 'other'end as    [科目描述],
+                - sum(本期余额)/100000000 as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and   ( [科目] in ('2711101010','2711101020','2711102000','2721010100')  or  [科目]  like '6031%'   )
+and ( [科目] in ('2711101010','2711101020','2711102000','2721010100')  or   ( [科目]  like '6031%' and  [产品描述] not like '%万能%' and  [产品描述] not like '%投资连结%' ) ) 
+              group  by  
+              [缴费年期描述] ,
+              [设计类型描述], 
+              [科目描述]
+              having sum(本期余额) <=  -1000000
+              ")
+datasj <- dbGetQuery( con,zsql)
+ 
+
+datasj1 <- sqldf("select distinct 缴费年期描述 ,sum(本年新增) as 本年新增  from  datasj  group by  缴费年期描述 order by  sum(本年新增) desc ")
+datasj2 <- sqldf("select distinct 设计类型描述 ,sum(本年新增) as 本年新增 from  datasj  group by  设计类型描述 order by  sum(本年新增) desc ")
+datasj3 <- sqldf("select distinct 科目描述 ,sum(本年新增)  as 本年新增    from  datasj  group by  科目描述 order by  sum(本年新增) desc ")
+datasj4 <- sqldf("select distinct concat(' ',缴费年期) AS  缴费年期 ,sum(本年新增) as 本年新增     from  datasj  group by  缴费年期 order by  sum(本年新增) desc ")
+ 
+ 
+
+# datasj1$缴费年期描述 = as.character(paste( datasj1$缴费年期描述, ": ", round(datasj1$本年新增,2) , sep="")   )  
+# datasj2$设计类型描述 = as.character(paste( datasj2$设计类型描述, ": ", round(datasj2$本年新增,2) , sep="")   )  
+# datasj3$科目描述 = as.character(paste( datasj3$科目描述, ": ", round(datasj3$本年新增,2) , sep="")   )  
+# datasj4$缴费年期 = as.character(paste( datasj4$缴费年期, ": ", round(datasj4$本年新增,2) , sep="")   )  
+
+
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( as.character(datasj1$"缴费年期描述"),  
+                       as.character(datasj2$"设计类型描述"),  
+                       as.character(datasj3$"科目描述") ,  
+                       as.character(datasj4$"缴费年期") 
+))  
+Nodes <- data.frame(name = all_nodes)  
+# 合并项目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf(" 
+                 select  缴费年期描述 as Source  , 设计类型描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 缴费年期描述, 设计类型描述 
+                union all 
+                 select  设计类型描述 as Source  , 科目描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 设计类型描述, 科目描述   
+                union all 
+                 select  科目描述 as Source  , concat(' ',缴费年期)  as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 科目描述, 缴费年期   
+                ") 
+ 
+
+Nodes$name <- c(as.character(Nodes$name))
+
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+
+links3$Source = paste(links3$Source, ": ", round(links3$Value,2) , sep="")
+links3$Target = paste(links3$Target, ": ", round(links3$Value,2) , sep="")
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",
+                      fontSize = 12,  
+                      nodeWidth = 30,  
+                      units = "亿元")  
+ 
+
+# 展示桑基图  
+plot 
+```
+
+## 6.8 保费收入-旧准则投资设计、首续期与缴费年期-旭日图
+
+（单位：亿元）
+
+```{r   echo=FALSE  , fig.height= 7, fig.width= 9 ,  message=FALSE, warning=FALSE}
+zsql <- paste("select   
+              [缴费年期描述] ,
+              [设计类型描述], 
+              CASE 
+              WHEN 科目描述 LIKE '%续期%' then '续期'
+              WHEN 科目描述 LIKE '%期交%' then '新单期交'
+              WHEN 科目描述 LIKE '%趸交%' then '新单趸交'             
+              else 'other'end as    [科目描述],
+                - sum(本期余额)/100000000 as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and   ( [科目] in ('2711101010','2711101020','2711102000','2721010100')  or  [科目]  like '6031%'   )
+and ( [科目] in ('2711101010','2711101020','2711102000','2721010100')  or   ( [科目]  like '6031%' and  [产品描述] not like '%万能%' and  [产品描述] not like '%投资连结%' ) ) 
+              group  by  
+              [缴费年期描述] ,
+              [设计类型描述], 
+              [科目描述]
+          having sum(本期余额) <=  -1000000
+              ")
+
+# 获取数据
+df <- dbGetQuery( con,zsql) 
+
+# 创建新的数据框df1
+df1 <- sqldf(" 
+select '旧准则保费收入'  as  parents  ,设计类型描述 as ids , concat(设计类型描述, concat('<br>',round(sum(本年新增),2) )) as labels,    sum(本年新增)  as value  from df  group by 设计类型描述 
+union all select 设计类型描述 as parents  ,CONCAT(设计类型描述,科目描述) as ids , concat(科目描述,concat('<br>',round(sum(本年新增),2) )) as labels,    sum(本年新增)  as value  from df  group by 设计类型描述 ,CONCAT(设计类型描述,科目描述)
+union all select CONCAT(设计类型描述,科目描述)   ,CONCAT(CONCAT(设计类型描述,科目描述),缴费年期描述) ,concat(缴费年期描述,concat('<br>',round(sum(本年新增),2) )) as labels,    sum(本年新增)  as value  from df  
+             group by CONCAT(设计类型描述,科目描述) ,CONCAT(CONCAT(设计类型描述,科目描述),缴费年期描述)")
+
+ 
+ 
+# 创建旭日图
+fig <- plot_ly( 
+              df1, 
+              ids = ~ids, 
+              labels = ~labels, 
+              parents = ~parents, 
+              values = ~value ,
+              type = 'sunburst',
+              branchvalues = 'total'
+              )
+
+fig <- fig %>% layout(
+  title = "旧准则保费情况分布" ,
+  showlegend = FALSE,
+  autosize = T,
+  # width = 500,
+  # height = 500,
+  margin = list(    l = 50,    r = 50,    b = 100,    t = 100,    pad = 4  ),
+  paper_bgcolor = "white",
+  plot_bgcolor = "white"
+)
+fig
+```
+
+<!-- 基础数据准备-凭证明细 -->
+
+```{r   echo = FALSE ,  message = FALSE , warning = FALSE}
+  
+  # 执行SQL查询并将结果保存到数据框中    
+  datapzdetail <- dbGetQuery(  con, paste( "SELECT  case 
+when 公司代码  like '20%'  then  '总公司'
+when 公司代码  like '211%'  then  '北京'
+when 公司代码  like '212%'  then  '天津'
+when 公司代码  like '213%'  then  '河北'
+when 公司代码  like '214%'  then  '山西'
+when 公司代码  like '221%'  then  '辽宁'
+when 公司代码  like '222%'  then  '吉林'
+when 公司代码  like '223%'  then  '黑龙江'
+when 公司代码  like '231%'  then  '上海'
+when 公司代码  like '232%'  then  '江苏'
+when 公司代码  like '233%'  then  '浙江'
+when 公司代码  like '234%'  then  '安徽'
+when 公司代码  like '236%'  then  '江西'
+when 公司代码  like '237%'  then  '山东'
+when 公司代码  like '241%'  then  '河南'
+when 公司代码  like '242%'  then  '湖北'
+when 公司代码  like '243%'  then  '湖南'
+when 公司代码  like '244%'  then  '广东'
+when 公司代码  like '247%'  then  '深圳'
+when 公司代码  like '251%'  then  '四川'
+else '其他' end as 分公司 ,[过帐日期]   ,[产品],[科目]
+      ,[科目描述]
+      ,[产品描述]
+      ,[渠道]
+      ,[渠道描述] , - sum([本期借方金额] - [本期贷方金额] ) as 发生额
+  FROM [DJSX].[dbo].[SAP_voucher_test] 
+  where 行摘要 not like '%风险保费%'
+  and 科目 like '6031%'
+  and  会计年度 = " , zyear  ,  "and 会计期间 = " ,zmonth   , " 
+  group by 
+ case 
+when 公司代码  like '20%'  then  '总公司'
+when 公司代码  like '211%'  then  '北京'
+when 公司代码  like '212%'  then  '天津'
+when 公司代码  like '213%'  then  '河北'
+when 公司代码  like '214%'  then  '山西'
+when 公司代码  like '221%'  then  '辽宁'
+when 公司代码  like '222%'  then  '吉林'
+when 公司代码  like '223%'  then  '黑龙江'
+when 公司代码  like '231%'  then  '上海'
+when 公司代码  like '232%'  then  '江苏'
+when 公司代码  like '233%'  then  '浙江'
+when 公司代码  like '234%'  then  '安徽'
+when 公司代码  like '236%'  then  '江西'
+when 公司代码  like '237%'  then  '山东'
+when 公司代码  like '241%'  then  '河南'
+when 公司代码  like '242%'  then  '湖北'
+when 公司代码  like '243%'  then  '湖南'
+when 公司代码  like '244%'  then  '广东'
+when 公司代码  like '247%'  then  '深圳'
+when 公司代码  like '251%'  then  '四川'
+else '其他' end ,[过帐日期]   ,[产品]
+      ,[产品描述],[科目]
+      ,[科目描述]
+      ,[渠道]
+      ,[渠道描述] ") ) 
+  #print(datapzdetail)
+  #定义作图的年月
+  #print([DJSX].[dbo].[balance_test])
+ 
+```
+
+## 6.9 新准则当月保费承保日期分布图（不含风险保费）
+
+为使数据更有对比，对保费取了对数log10；（单位：亿元）
+
+```{r echo = FALSE ,  message = FALSE, warning = FALSE}
+  ##已在取detail表时对期间进行了限定
+  datacomp <- sqldf("select 分公司,过帐日期, sum(发生额)  as 新单保费  from datapzdetail 
+                  where 科目 like '603101%' 
+                  group by 分公司,过帐日期 ")
+  p91 = ggplot(datacomp,aes(x=分公司,y= as.character(过帐日期) ,fill= log10(新单保费)  )) + 
+    geom_raster()+
+    #scale_fill_gradient(low="pink", high="red",na.value = "grey50" )+
+    scale_fill_gradient2(low="blue", high="red", mid="white",midpoint = 0)+
+    scale_y_discrete(position="left") +
+    theme_grey()+#主题
+    labs(x= "",  title = "保费承保分布-分公司")+ #去除轴标题
+    theme(axis.text.x = element_text(angle = 15, hjust = 1, vjust = .4 ,  size = 10 )) +
+    theme(panel.grid.major=element_blank())
+  # print(p91)
+  # ggsave(paste(flag ,"p91.png"), plot =p91, width = 8, height = 4, dpi = 150)
+  # picname = paste(flag ,"p91.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+  
+     p91 <- ggplotly( p91 )
+     p91 
+     
+  datacomp <- sqldf("select 渠道描述,过帐日期, sum(发生额)  as 新单保费  from datapzdetail 
+                  where 科目 like '603101%'
+                  group by 渠道描述,过帐日期 ")
+  datacomp1 <-  log10(datacomp$新单保费  ) 
+  datacomp <- data.frame(datacomp,datacomp1)
+  # print(datacomp)
+  
+  p92 = ggplot(datacomp,aes(x=渠道描述,y= as.character(过帐日期) ,fill=  log10(新单保费) )) + 
+    geom_raster()+
+    scale_fill_gradient2(low="blue", high="red", mid="white",midpoint = 0)+
+    #scale_fill_gradient(low="pink", high="red",na.value = "grey50",guide = "colourbar"  )+
+    scale_y_discrete(position="left") +
+    theme_grey()+#主题
+    labs(x= "",  title = "保费承保分布-渠道")+ #去除轴标题
+    theme(axis.text.x = element_text(angle = 15, hjust = 1, vjust = .4 ,  size = 10 )) +
+    theme(panel.grid.major=element_blank())
+  # print(p92)
+  
+  # ggsave(paste(flag ,"p92.png"), plot =p92, width = 8, height = 4, dpi = 150)
+  # picname = paste(flag ,"p92.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+   p92<- ggplotly( p92 )
+     p92 
+  
+  datacomp <- sqldf("select 产品描述,过帐日期, sum(发生额)   as 新单保费 from datapzdetail 
+                  where 科目 like '603101%'
+                  group by 产品描述,过帐日期 having sum(发生额)  > 1000000 ")
+  p93 = ggplot(datacomp,aes(x=产品描述,y= as.character(过帐日期) ,fill=  log10(新单保费) )) + 
+    geom_raster()+
+    scale_fill_gradient2(low="blue", high="red", mid="white",midpoint = 0)+
+    scale_y_discrete(position="left") +
+    theme_grey()+#主题
+    labs(x= "",  title = "保费承保分布-产品（大于100万）")+ #去除轴标题
+    theme(axis.text.x = element_text(angle = 15, hjust = 1, vjust = .4 ,  size = 10 )) +
+    theme(panel.grid.major=element_blank())
+  # print(p93)
+  # 
+  # ggsave(paste(flag ,"p93.png"), plot =p93, width = 8, height = 4, dpi = 150)
+  # picname = paste(flag ,"p93.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+ p93<- ggplotly( p93 )
+     p93 
+  
+```
+
+### 7.1 赔付退保产品分布
+
+（单位：亿元）
+
+```{r echo = FALSE  ,message = FALSE , warning = FALSE}
+  #   ,out.width  = 25 , out.height = 10
+  #############################################################################################################理赔医疗
+  zsqlo <- paste("select 会计年度 ,   sum(本期余额)/100000000 as 本年新增 ,产品描述
+              from [DJSX].[dbo].[balance_test] 
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and (   科目 in ('2711070000','2721010800','6511010000','6511040000','6402050000'))
+              group  by 会计年度 ,  产品描述  ")
+  data141 <-  dbGetQuery( con,zsqlo)   
+  zsqlo <- paste("select 会计年度 , sum(本年新增) as 本年新增 , case when abs(本年新增) > 0.1 then 产品描述 else '其他产品' end as  产品描述
+              from data141  group  by 会计年度 ,  产品描述     order by sum(本年新增) ")
+  data141 <- sqldf(zsqlo) 
+  # data141 <- sqldf("select 会计年度 ,本年新增,replace(replace(replace(replace(replace(replace(产品描述,'寿险',''),'安邦',''),'保险',''),'（分红型）','-分红'),'（万能型）','-万能'),'大家','') as 产品描述 from data141 ")
+  # 生成图片  
+  # 自定义函数来换行标签，处理向量输入  
+  # wrap_label_vec <- function(labels, width = 5) {  
+  #   wrapped_labels <- character(length(labels)) # 预先分配结果的长度  
+  #   for (i in seq_along(labels)) {  
+  #     label <- labels[i]  
+  #     lines <- strsplit(label, "")[[1]] # 将标签拆分为单个字符  
+  #     current_line <- character() # 当前行的字符  
+  #     wrapped_lines <- list() # 保存所有行的列表  
+  #     
+  #     for (char in lines) {  
+  #       if (nchar(paste0(current_line, char)) <= width) {  
+  #         # 如果添加当前字符后不超过宽度，则将其添加到当前行  
+  #         current_line <- paste0(current_line, char)  
+  #       } else {  
+  #         # 否则，将当前行保存为已完成，并开始新行  
+  #         wrapped_lines <- c(wrapped_lines, current_line)  
+  #         current_line <- char  
+  #       }  
+  #     }  
+  #     # 不要忘记添加最后一行  
+  #     wrapped_lines <- c(wrapped_lines, current_line)  
+  #     
+  #     # 将所有行重新组合为单个字符串，并用换行符分隔  
+  #     wrapped_labels[i] <- paste(wrapped_lines, collapse = "\n")  
+  #   }  
+  #   
+  #   return(wrapped_labels)  
+  # }  
+  # 
+  # p141 <- ggplot(data141,  aes(x = 产品描述, y = 本年新增,fill = 产品描述 )) +  
+  #   geom_bar(stat = "identity" , width = 0.6 ,position = "stack" ) +
+  #   #   scale_y_continuous(limits = c(0, 2), breaks = seq(0,  2 , by = 0.5)) +
+  #   labs(x = "保险产品",  y = "本年新增" , title = "（1）主要产品理赔医疗支出（含万能）" )  +
+  #   theme_grey()+#主题
+  #   theme(axis.text = element_text(colour = "black", size = rel(0.5)))+
+  #   theme(legend.position = "none") + #隐藏示例图例
+  #   #修改玫瑰图的展示
+  #   theme(axis.text = element_text(colour = "black", size = rel(1))) + 
+  #   theme(axis.text.x = element_text(angle = 30, hjust = 2, vjust = .5 ,  size   = 8 ,color = "black" )) +   #,face="bold"
+  #   scale_x_discrete(labels = function(labels) wrap_label_vec(labels, width = 6)) # 使用匿名函数来设置标签和宽度  
+  # 
+  # 
+  # p1411 <- p141 + coord_polar()  +
+  #        theme(axis.text.y = element_text(size = 12))
+  # 
+  # # ggsave(paste(flag ,"p1411.png"), plot =  p1411  , width = 8, height = 4, dpi = 150)
+  # # picname = paste(flag ,"p1411.png")
+  # # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+  # p1411
+  
+     p <- plot_ly(
+  data141, 
+  labels = ~产品描述, 
+  values = ~本年新增, 
+  type = 'pie', 
+  hole = 0, 
+  textinfo = "label+percent",
+  insidetextorientation = "radial"
+)
+p <- p %>% layout(
+  title = "（1）主要产品理赔医疗支出（含万能）",
+  showlegend = TRUE,
+  autosize = FALSE,
+  # width = 500,
+  # height = 500,
+  margin = list(    l = 50,    r = 50,    b = 100,    t = 100,    pad = 4  ),
+  paper_bgcolor = "white",
+  plot_bgcolor = "white"
+)
+p
+  # geom_text(aes(label = 本月新增), vjust = 1.5, colour = "black")
+  #################################################################################################################满期
+  zsqlo <- paste("select 会计年度 ,   sum(本期余额)/100000000 as 本年新增 ,产品描述
+              from [DJSX].[dbo].[balance_test] 
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and (   科目 in ('2711090000','2721010900','6511020000'))
+              group  by 会计年度 ,  产品描述  ")
+  data142 <- dbGetQuery( con,zsqlo)   
+  zsqlo <- paste("select 会计年度 , sum(本年新增) as 本年新增 , case when abs(本年新增) > 0.01 then 产品描述 else '其他产品' end as  产品描述
+              from data142  group  by 会计年度 ,  产品描述     order by sum(本年新增) ")
+  data142 <- sqldf(zsqlo) 
+  # data142 <- sqldf("select 会计年度 ,本年新增,replace(replace(replace(replace(replace(replace(产品描述,'寿险',''),'安邦',''),'保险',''),'（分红型）','-分红'),'（万能型）','-万能'),'大家','') as 产品描述 from data142 ")
+  # 生成图片  
+  # p142 <- ggplot(data142,  aes(x = 产品描述, y = 本年新增,fill = 产品描述 )) +  
+  #   geom_bar(stat = "identity" , width = 0.6 ,position = "stack" ) +
+  #   #    scale_y_continuous(limits = c(0, 4), breaks = seq(0, 4, by = 0.5)) +
+  #   labs(x = "保险产品",  y = "本年新增" , title = "（2）主要产品满期支出（含万能）" )  +
+  #   theme_grey()+#主题
+  #   theme(legend.position = "none") + #隐藏示例图例
+  #   #修改玫瑰图的展示
+  #   theme(axis.text = element_text(colour = "black", size = rel(1))) + 
+  #   theme(axis.text.x = element_text(angle = 30, hjust = 2, vjust = .5 ,  size   = 8 ,color = "black"  )) +   #,face="bold"
+  #   scale_x_discrete(labels = function(labels) wrap_label_vec(labels, width = 6)) # 使用匿名函数来设置标签和宽度 
+  # p1421 <- p142 + coord_polar()  +
+  #        theme(axis.text.y = element_text(size = 12))
+  # geom_text(aes(label = 本月新增), vjust = 1.5, colour = "black")
+  
+  # ggsave(paste(flag ,"p1421.png"), plot =  p1421  , width = 8, height = 4, dpi = 150)
+  # picname = paste(flag ,"p1421.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+   p <- plot_ly(
+  data142, 
+  labels = ~产品描述, 
+  values = ~本年新增, 
+  type = 'pie', 
+  hole = 0, 
+  textinfo = "label+percent",
+  insidetextorientation = "radial"
+)
+p <- p %>% layout(
+  title = "（2）主要产品满期支出（含万能）",
+  showlegend = TRUE,
+  autosize = FALSE,
+  # width = 500,
+  # height = 500,
+  margin = list(    l = 50,    r = 50,    b = 100,    t = 100,    pad = 4  ),
+  paper_bgcolor = "white",
+  plot_bgcolor = "white"
+)
+p
+  #################################################################################################################年金
+  zsqlo <- paste("select 会计年度 ,   sum(本期余额)/100000000 as 本年新增 ,产品描述
+              from [DJSX].[dbo].[balance_test] 
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and (   科目 in ('2721011000','2711120000','6511030000'))
+              group  by 会计年度 ,  产品描述  ")
+  data143 <- dbGetQuery( con,zsqlo)     
+  zsqlo <- paste("select 会计年度 , sum(本年新增) as 本年新增 , case when abs(本年新增) > 0.01 then 产品描述 else '其他产品' end as  产品描述
+              from data143  group  by 会计年度 ,  产品描述     order by sum(本年新增) ")
+  data143 <- sqldf(zsqlo) 
+  # data143 <- sqldf("select 会计年度 ,本年新增,replace(replace(replace(replace(replace(replace(产品描述,'寿险',''),'安邦',''),'保险',''),'（分红型）','-分红'),'（万能型）','-万能'),'大家','') as 产品描述 from data143 ")
+  # 生成图片  
+  # p143 <- ggplot(data143,  aes(x = 产品描述, y = 本年新增,fill = 产品描述 )) +  
+  #   geom_bar(stat = "identity" , width = 0.6 ,position = "stack" ) +
+  #   #    scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.5)) +
+  #   labs(x = "保险产品",  y = "本年新增" , title = "（3）主要产品年金支出（含万能）" )  +
+  #   theme_grey()+#主题
+  #   theme(legend.position = "none") + #隐藏示例图例
+  #   theme(axis.text = element_text(colour = "black", size = rel(1))) + 
+  #   theme(axis.text.x = element_text(angle = 30, hjust = 2, vjust = .5 ,  size   = 8 ,color = "black" )) +   #,face="bold"
+  #   scale_x_discrete(labels = function(labels) wrap_label_vec(labels, width = 6)) # 使用匿名函数来设置标签和宽度  
+  # p1431 <- p143 + coord_polar()  +
+  #        theme(axis.text.y = element_text(size = 12))
+  # 
+  # # ggsave(paste(flag ,"p1431.png"), plot =  p1431  , width = 8, height = 4, dpi = 150)
+  # # picname = paste(flag ,"p1431.png")
+  # # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+  # p1431
+     p <- plot_ly(
+  data143, 
+  labels = ~产品描述, 
+  values = ~本年新增, 
+  type = 'pie', 
+  hole = 0, 
+  textinfo = "label+percent",
+  insidetextorientation = "radial"
+)
+p <- p %>% layout(
+  title = "（3）主要产品年金支出（含万能）",
+  showlegend = TRUE,
+  autosize = FALSE,
+  # width = 500,
+  # height = 500,
+  margin = list(    l = 50,    r = 50,    b = 100,    t = 100,    pad = 4  ),
+  paper_bgcolor = "white",
+  plot_bgcolor = "white"
+)
+p
+  # geom_text(aes(label = 本月新增), vjust = 1.5, colour = "black")
+  #################################################################################################################退保
+  zsqlo <- paste("select 会计年度 ,   sum(本期余额)/100000000 as 本年新增 ,产品描述
+              from [DJSX].[dbo].[balance_test] 
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and (   科目 in ('6402040000','6531000000','2721010700','2711080000')) 
+              group  by 会计年度 ,  产品描述  ")
+  # 6051080000  其他业务收入-手续费收入 冲减退保手续费
+  data144 <- dbGetQuery( con,zsqlo)   
+  zsqlo <- paste("select 会计年度 , sum(本年新增) as 本年新增 , case when abs(本年新增) > 10 then 产品描述 else '其他产品' end as  产品描述
+              from data144  group  by 会计年度 ,  产品描述     order by sum(本年新增) ")
+  data144 <- sqldf(zsqlo) 
+  # data144 <- sqldf("select 会计年度 ,本年新增,replace(replace(replace(replace(replace(replace(产品描述,'寿险',''),'安邦',''),'保险',''),'（分红型）','-分红'),'（万能型）','-万能'),'大家','') as 产品描述 from data144 ")
+  # 生成图片  
+ #  p144 <- ggplot(data144,  aes(x = 产品描述, y = 本年新增,fill = 产品描述 )) +  
+ #    geom_bar(stat = "identity" , width = 0.6 ,position = "stack" ) +
+ #    #    scale_y_continuous(limits = c(0, 1100), breaks = seq(0, 1100, by = 100)) +
+ #    labs(x = "保险产品",  y = "本年新增" , title = "（4）主要产品退保支出（含万能）" )  +
+ #    theme_grey()+#主题
+ #    theme(legend.position = "none") + #隐藏示例图例
+ #    theme(axis.text = element_text(colour = "black", size = rel(1))) + 
+ #    theme(axis.text.x = element_text(angle = 30, hjust = 2, vjust = .5 ,  size   = 8 ,color = "black" )) +   #,face="bold"
+ #    scale_x_discrete(labels = function(labels) wrap_label_vec(labels, width = 6)) # 使用匿名函数来设置标签和宽度  
+ #  p1441 <- p144 + coord_polar()  +
+ #         theme(axis.text.y = element_text(size = 12))
+ #  # geom_text(aes(label = 本月新增), vjust = 1.5, colour = "black")
+ #  
+ #  # ggsave(paste(flag ,"p1441.png"), plot =  p1441  , width = 8, height = 4, dpi = 150)
+ #  # picname = paste(flag ,"p1441.png")
+ #  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+ # p1441
+  p <- plot_ly(
+  data144, 
+  labels = ~产品描述, 
+  values = ~本年新增, 
+  type = 'pie', 
+  hole = 0, 
+  textinfo = "label+percent",
+  insidetextorientation = "radial"
+)
+p <- p %>% layout(
+  title = "（4）主要产品退保支出（含万能）",
+  showlegend = TRUE,
+  autosize = FALSE,
+  # width = 500,
+  # height = 500,
+  margin = list(    l = 50,    r = 50,    b = 100,    t = 100,    pad = 4  ),
+  paper_bgcolor = "white",
+  plot_bgcolor = "white"
+)
+p
+```
+
+## （五）费用情况分析
+
+### 8.1 预算大类费用（业管费）使用情况（占比）-本年
+
+```{r   echo = FALSE   , message = FALSE, warning = FALSE}
+  ##本年
+  zsqly <- paste("select 预算大类 , 分公司 , sum(期末余额)/100000000 as 本年新增  
+              from datays
+              where 会计年度 = " , zyear  , "and 会计期间 = " ,zmonth  , "
+              and 科目 like '6601%' 
+              and 分公司<> '总公司'
+              group  by 预算大类 , 分公司
+              order by 预算大类 , 分公司 ")
+  data62 <- sqldf(zsqly)  
+  data621 <- sqldf("select   分公司,   sum(本年新增) as 分公司合计   from  data62 group by  分公司   ")
+  data622 <- sqldf("select  data62.预算大类 , data62.分公司, round(本年新增/data621.分公司合计*100,2)  as 占比  from data62 left join  data621 on data62.分公司 = data621.分公司 ")
+  #绘图
+  p62 <- ggplot(data622,  aes(x = 分公司, y = 占比,fill = 预算大类 )) +  
+    geom_bar(stat = "identity" , width = 0.6 ,position = "stack") +  
+    scale_fill_brewer(palette = "Paired")  +
+    # geom_col(fill="orange") +
+    scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, by = 10)) +
+    labs(x = "",  y = "占比" , title = "预算大类费用（业管费）使用情况（本年）" )   +
+    theme(axis.text = element_text(colour = "black", size = rel(0.6))) + 
+    theme(axis.text.x = element_text(angle = 30, hjust = 2, vjust = .5 ,  size   = 8 ,color = "black" )) +
+    geom_text(aes(label = 占比),  position=position_stack(vjust=0.5), colour = "black",size = 3 )
+  
+  ##本年
+  # ggsave(paste(flag ,"p62.png"), plot = p62 , width = 8, height = 4, dpi = 150)
+  # picname = paste(flag ,"p62.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+     p62 <- ggplotly( p62 )
+     p62
+```
+
+### 8.2 预算大类费用（业管费）使用情况-本月（占比）
+
+```{r   echo = FALSE   , message = FALSE, warning = FALSE}
+  #本月##月度未结账时可能存在冲销数据导致报表整体异常
+  zsqlm <- paste("select 预算大类 , 分公司 , sum(本期余额)/100000000 as 本月新增  
+              from datays
+              where 会计年度 = " , zyear  , "and 会计期间 = " ,zmonth , "
+              and 科目 like '6601%' 
+              and 分公司<> '总公司'
+              group  by 预算大类 , 分公司
+              order by 预算大类 , 分公司 ")
+  data61 <- sqldf(zsqlm)  
+  data611 <- sqldf("select   分公司,   sum(本月新增) as 分公司合计   from  data61 group by  分公司 ")
+  data612 <- sqldf("select  data61.预算大类 , data61.分公司, round(data61.本月新增/data611.分公司合计*100,2)  as 占比  from data61 left join  data611 on data61.分公司 = data611.分公司 ")
+  #绘图
+  p61 <- ggplot(data612,  aes(x = 分公司, y = 占比,fill = 预算大类 )) +  
+    geom_bar(stat = "identity" , width = 0.6 ,position = "stack") +  
+    scale_fill_brewer(palette = "Paired")  +
+    # geom_col(fill="orange") +
+    # theme(legend.position = "none") + #隐藏示例图例
+    scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, by = 10)) +
+    labs(x = "",  y = "占比" , title = "预算大类费用（业管费）使用情况（本月）" )   +
+    geom_text(aes(label = 占比),  position=position_stack(vjust=0.5), colour = "black",size = 3)
+  
+  # ggsave(paste(flag ,"p61.png"), plot = p61 , width = 8, height = 4, dpi = 150)
+  # picname = paste(flag ,"p61.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+  p61<- ggplotly( p61 )
+     p61
+```
+
+### 8.3 预算大类费用（业管费）使用情况-分公司月度
+
+（单位：亿元）
+
+```{r   echo = FALSE   , message = FALSE, warning = FALSE}
+  #本月
+  zsqldm <- paste("select 会计期间 as 期间 , 预算大类 , sum(本期余额)/100000000 as 本月新增  
+              from datays
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and 科目 like '6601%' 
+              and 分公司<> '总公司'
+              group  by 会计期间  , 预算大类
+              order  by 会计期间   , 预算大类  ")
+  data63 <- sqldf(zsqldm)  
+  data63 <- sqldf("select   期间 , 预算大类 ,   round(sum(本月新增),2) as 本月新增   
+                  from  data63 group by  期间  , 预算大类  ")
+  #绘图
+  # print(data63)
+  p63 <- ggplot(data63,  aes(x =  as.character(期间), y = 本月新增 ,fill = 预算大类 )) +  
+    geom_bar(stat = "identity" , width = 0.6 ,position = "stack") +  
+    # geom_col(fill="orange") +
+    # theme(legend.position = "none") + #隐藏示例图例
+    scale_y_continuous(  breaks = seq(0, 3, by = 0.5)) + # limits = c(0, 100), 
+    labs(x = "期间",  y = "本月新增" , title = "预算大类费用（业管费）使用情况-月度" )   +
+    geom_text(aes(label = 本月新增),  position=position_stack(vjust=0.5), colour = "black",size = 3)
+  # ggsave(paste(flag ,"p63.png"), plot = p63   , width = 8, height = 4, dpi = 150)
+  # picname = paste(flag ,"p63.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+ p63<- ggplotly( p63 )
+     p63
+```
+
+### 8.4 预算大类费用（业管费）使用情况-总公司月度
+
+（单位：亿元）
+
+```{r   echo = FALSE   , message = FALSE, warning = FALSE}
+  #本月
+  zsqldm <- paste("select  会计期间 as 期间 , 预算大类 , sum(本期余额)/100000000 as 本月新增  
+              from datays
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and 科目 like '6601%' 
+              and 分公司 = '总公司'
+              group  by 会计期间  , 预算大类
+              order by 会计期间  , 预算大类  ")
+  data64 <- sqldf(zsqldm)  
+  data64 <- sqldf("select   期间 , 预算大类 ,   round(sum(本月新增),2) as 本月新增   
+                  from  data64 group by  期间  , 预算大类  ")
+  #绘图
+  #print(data64)
+  p64 <- ggplot(data64,  aes(x = 期间, y = 本月新增 ,fill = 预算大类 )) +  
+    geom_bar(stat = "identity" , width = 0.6 ,position = "stack") +  
+    # geom_col(fill="orange") +
+    # theme(legend.position = "none") + #隐藏示例图例
+    scale_y_continuous(  breaks = seq(0, 3, by = 0.5)) + # limits = c(0, 100), 
+    labs(x = "期间",  y = "本月新增" , title = "预算大类费用（业管费）使用情况-月度" )   +
+    geom_text(aes(label = 本月新增),  position=position_stack(vjust=0.5), colour = "black",size = 3)
+  
+  # print(p64)
+  # ggsave(paste(flag ,"p64.png"), plot = p64   , width = 8, height = 4, dpi = 150)
+  # picname = paste(flag ,"p64.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+   p64<- ggplotly( p64 )
+     p64
+```
+
+### 8.5 预算大类费用（业管费）、月份及分公司分布图（桑基图）
+
+（单位：元）
+
+```{r   echo = FALSE  , fig.height= 7,   fig.width= 9 , message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE)  
+zsq65 <- paste("select 分公司,   会计期间    , 预算大类 , sum(本期余额)  as 本年新增  
+              from datays
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and 科目 like '6601%' 
+              group  by 分公司,会计期间 , 预算大类
+              order by 分公司,会计期间 , 预算大类  ")
+data65 <- sqldf(zsq65)  
+ 
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c(as.character(data65$"会计期间"),as.character(data65$"分公司"),  as.character(data65$"预算大类")))  
+Nodes <- data.frame(name = all_nodes)  
+ 
+# 合并一级科目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf("select  FORMAT( 会计期间, '00000')  as Source, 分公司 as Target , sum(本年新增) as Value  ,  ''  as 'source_id' ,'' as 'target_id'  
+                      from data65
+                      group by 会计期间 ,分公司 
+                      union all 
+                 select  分公司 as Source  , 预算大类 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from data65
+                      group by 分公司, 预算大类 ") 
+ 
+Nodes$name <- c(as.character(Nodes$name))
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+ 
+# 绘制桑基图  
+p65 <- sankeyNetwork(Links = links3,  
+                     Nodes = Nodes,  
+                     Source = "source_id",  
+                     Target = "target_id",  
+                     Value = "Value",  
+                     #      LinkGroup = 'source_id', # 颜色分组
+                     NodeID = "name",  
+                     fontSize = 15,  
+                     nodeWidth = 30,  
+                     units = "元")  
+# 展示桑基图  
+p65
+```
+
+### 8.6 预算大类费用与核算科目(业管费）对照分布图（桑基图）
+
+（单位：百万元）
+
+以下图表：筛选核算科目汇总金额大于100万
+
+```{r   echo = FALSE   , fig.height= 7, fig.width= 9 ,   message = FALSE, warning = FALSE}
+  #本年新增
+   zsqldm <- paste("select 二级科目,  会计期间  as 期间 , 预算大类 , sum(本期余额) as 本年新增  
+              from datays
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and 科目 like '6601%' 
+              group  by 二级科目,会计期间 , 预算大类
+              order by 二级科目,会计期间, 预算大类  ")
+  data66 <- sqldf(zsqldm)  
+  datak6acctfiter <- sqldf("select   二级科目 ,sum(本年新增)  as 本年新增  from data66 group by 二级科目")
+
+  data67<- data66
+
+  data66 <- sqldf("select case
+                          when  round(sum(本年新增)/1000000,2)  >= 1 then substr(二级科目,14,50)
+                          else '其他科目大于100万'  end  as  二级科目,  预算大类 ,   round(sum(本年新增)/1000000,2) as 本年新增
+                         from  data66
+                         where 二级科目 in (select 二级科目 from datak6acctfiter where 本年新增 >= 1000000 )
+                         group by  二级科目 ,  预算大类     ")
+  
+  data66 <- sqldf("select 二级科目 ,  预算大类 ,    sum( 本年新增   ) as 本年新增   from  data66   group by  二级科目 ,  预算大类    ")
+  #   #绘图
+  
+ #   p66 <- ggplot(data66,
+ #                aes(#axis1 = 期间,
+ #                  axis1 = 预算大类, axis2 = 二级科目,y = 本年新增 ))
+ #  p66 <- p66+
+ #    geom_alluvium(aes(fill = as.factor(预算大类)), width = 2/5 ) +
+ #    geom_stratum(width = 1/5, discern = TRUE) +
+ #    geom_text_repel(size = 3 ,stat = "stratum", discern = TRUE, aes(label = after_stat(stratum)), ) +
+ #    labs( title = "核算科目汇总发生额大于等于5百万" )
+ # 
+ # ggsave(paste(flag ,"p66.png"), plot =  p66  , width = 8, height = 4, dpi = 100)
+ #  picname = paste(flag ,"p66.png")
+ #  knitr::include_graphics(paste(adrr1,picname,sep = ""))
+
+  
+# 第一步：根据“本年新增”对链接进行排序  
+links_sorted <- data66[order(-data66$本年新增), ]  
+# 第二步：更新节点顺序以匹配排序后的链接  
+nodes_unique <- unique(c(as.character(links_sorted$二级科目), as.character(links_sorted$预算大类)))  
+nodes_sorted <- data.frame(name = nodes_unique)  
+# 匹配节点名称以获取源和目标索引  
+links_sorted$Source <- match(links_sorted$二级科目, nodes_sorted$name) - 1  
+links_sorted$Target <- match(links_sorted$预算大类, nodes_sorted$name) - 1  
+# 第三步：绘制桑基图  
+p66 <- sankeyNetwork(Links = links_sorted,  
+                               Nodes = nodes_sorted,  
+                               Source = "Source",  
+                               Target = "Target",  
+                               Value = "本年新增",  
+                               NodeID = "name",  
+                               fontSize = 12,  
+                               nodeWidth = 30,  
+                               units = "百万元")  
+#展示
+p66
+
+```
+
+以下图表：筛选核算科目汇总金额小于100万
+
+```{r   echo = FALSE   , fig.height= 7, fig.width= 9   , message = FALSE, warning = FALSE}
+
+ data67 <- sqldf("select case
+                          when  round(sum(本年新增)/1000000,2)  >= 0.1  then substr(二级科目,14,50)
+                          else '其他科目小于10万'  end  as  二级科目, 期间 , 预算大类 ,   round(sum(本年新增),2) as 本年新增
+                         from  data67
+                          where 二级科目 in ( select 二级科目 from datak6acctfiter where 本年新增 < 1000000 )
+                          group by  二级科目  , 期间  , 预算大类  ")
+ data67 <- sqldf("select 二级科目 ,  预算大类 ,    sum( 本年新增 ) as 本年新增  from  data67      group by  二级科目 ,  预算大类 having  sum( 本年新增 ) > 0    ")
+  #   #绘图
+ 
+
+# 第一步：根据“本年新增”对链接进行排序  
+links_sorted <- data67[order(-data67$本年新增), ]  
+# 第二步：更新节点顺序以匹配排序后的链接  
+nodes_unique <- unique(c(as.character(links_sorted$二级科目), as.character(links_sorted$预算大类)))  
+nodes_sorted <- data.frame(name = nodes_unique)  
+# 匹配节点名称以获取源和目标索引  
+links_sorted$Source <- match(links_sorted$二级科目, nodes_sorted$name) - 1  
+links_sorted$Target <- match(links_sorted$预算大类, nodes_sorted$name) - 1  
+# 第三步：绘制桑基图  
+p67 <- sankeyNetwork(Links = links_sorted,  
+                               Nodes = nodes_sorted,  
+                               Source = "Source",  
+                               Target = "Target",  
+                               Value = "本年新增",  
+                               NodeID = "name",  
+                               fontSize = 20,  
+                               nodeWidth = 30,  
+                               units = "元")  
+#展示
+p67
+  
+```
+
+### 9.1 业管费使用效率(业管费/新单保费-不含万能)
+
+注：业管费(按成本中心取账上财务数据)
+
+```{r   echo = FALSE   , message = FALSE, warning = FALSE}
+
+zsq67n <- paste("SELECT   分公司,     会计期间 , 
+sum( case when   科目  like '6601%'   and  substring([成本中心],5,3)  = '201' then   [期末余额]   else 0 end ) /
+-sum( case when   科目  like '603101%'   and  substring([成本中心],5,3)  = '201' then   [期末余额]   else 0 end )  as 银保业管费与新单保费比例  ,
+sum( case when   科目  like '6601%'   and  substring([成本中心],5,3)  = '202' then   [期末余额]   else 0 end ) /
+-sum( case when   科目  like '603101%'   and  substring([成本中心],5,3)  = '202' then   [期末余额]   else 0 end )  as 个险业管费与新单保费比例
+FROM  [DJSX].[dbo].[balance_test]
+where 分公司 <> '总公司'
+and (  科目  like '6601%' or 科目  like '603101%')
+and ( substring([成本中心],5,3) = '201' or substring([成本中心],5,3) = '202' )  ----201 银保 202 个险
+and 会计年度 = " ,zyear ,"
+and 会计期间 <= " ,zmonth ,"
+group by  分公司 ,   会计期间
+order by  分公司 ,   会计期间   ")
+data67n <- dbGetQuery( con,zsq67n)    
+
+data67y <- sqldf("select 分公司 , round(sum(银保业管费与新单保费比例),4) as  比例  ,    会计期间
+                FROM  data67n
+                group by 分公司,  会计期间  ")
+               
+             
+data67g <- sqldf(" select 分公司 ,  round(sum(个险业管费与新单保费比例),4) as 比例  ,  会计期间
+                FROM  data67n 
+                group by 分公司, 会计期间 ") 
+
+# 找出最大值和最小值  
+
+# is_outlier <- function(x) {  
+#   # 计算四分位数和四分位距  
+#   Q1 <- quantile(x, 0.25)  
+#   Q3 <- quantile(x, 0.75)  
+#   IQR <- IQR(x)  
+  # 定义异常值条件  
+  # outliers <- x < Q1 - 1.5 * IQR | x > Q3 + 1.5 * IQR  
+  # max_value <- max(x)  
+  # min_value <- min(x)  
+  # 返回异常值逻辑向量以及最大值和最小值  
+#   return(list(outliers = outliers, max_value = max_value, min_value = min_value))  
+# }  
+
+is_outlier <- function(x) {
+  return(x < quantile(x, 0.25) - 0.5 * IQR(x) | x > quantile(x, 0.75) + 0.5  * IQR(x))}
+#调整，显示更多的特殊值
+# return(x < quantile(x, 0.25) - 1.5 * IQR(x) | x > quantile(x, 0.75) + 1.5 * IQR(x))}
+# print(data67g)
+data67g<-data67g  %>%  
+  group_by(会计期间 ) %>%
+  mutate(outlier = ifelse(is_outlier(比例),分公司,as.character(NA)))
+# print(data67g)
+# p67g = ggplot(data67g, aes(x=as.character(会计期间), y=比例,group = 会计期间)) + 
+#   geom_boxplot()+
+#   theme(axis.text.x = element_text(angle = 15, hjust = 1, vjust = .5 ,  size = 10 )) +
+#   labs(x= "月份",y="业管费/新单保费", title = "业管费使用效率(业管费/新单保费)-个险")+ #去除轴标题
+#   # stat_summary(fun.y = mean, geom = "point", shape = 10, size=2)  + 
+#   geom_boxplot(fill = "pink", color = "black", outlier.shape = outlier )
+# # geom_text_repel(aes(label=outlier), na.rm = TRUE)
+# # print(p67g)
+
+ 
+p67g <- ggplot(data67g, aes(x = 会计期间, y = 比例)) +
+  geom_boxplot(aes(fill = 会计期间), outlier.shape = NA) +
+  geom_jitter(data = subset(data67g, !is.na(outlier)), width = 0.3, size = 1 , alpha = 0.6) +
+  geom_text(data = subset(data67g, !is.na(outlier)), aes(label = outlier ), hjust = -0.5) +
+  theme_minimal() +
+  labs(x= "月份",y="业管费/新单保费", title = "业管费使用效率(业管费/新单保费)-个险")  #去除轴标题
+
+   p67g<- ggplotly( p67g )
+   p67g 
+  
+ data67y<-data67y  %>%  
+  group_by(interaction(会计期间) ) %>%
+  mutate(outlier = ifelse(is_outlier(比例),分公司,as.character(NA)))
+# p67y = ggplot(data67y, aes(x=as.character(会计期间), y=比例,group = 会计期间)) + 
+#   # geom_half_violin(position = position_nudge(x=0.25),side = "r",width=0.8,color="blue") +  ##增加马琴图
+#   # geom_jitter(width = 0.2)+
+#   geom_boxplot()+
+#   theme(axis.text.x = element_text(angle = 15, hjust = 1, vjust = .5 ,  size = 10 )) +
+#   labs(x= "月份",y="业管费/新单保费", title = "业管费使用效率(业管费/新单保费)-银保")+ #去除轴标题
+#   # stat_summary(fun.y = mean, geom = "point", shape = 10, size=2)  + 
+#   geom_boxplot(fill = "pink", color = "black")+
+#   geom_text_repel(aes(label=outlier), na.rm = TRUE)
+# print(p67y)
+  # ggsave(paste(flag ,"p67g.png"), plot = p67g   , width = 8, height = 8, dpi = 150)
+  # picname = paste(flag ,"p67g.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+# p67g
+  # ggsave(paste(flag ,"p67y.png"), plot = p67y   , width = 8, height = 8, dpi = 150)
+  # picname = paste(flag ,"p67y.png")
+  # knitr::include_graphics(paste(adrr1,picname,sep = ""))
+ 
+p67y <- ggplot(data67y, aes(x = 会计期间, y = 比例)) +
+  geom_boxplot(aes(fill = 会计期间), outlier.shape = NA) +
+  geom_jitter(data = subset(data67y, !is.na(outlier)), width = 0.3, size = 1 , alpha = 0.6) +
+  geom_text(data = subset(data67y, !is.na(outlier)), aes(label = outlier ), hjust = -0.5) +
+  theme_minimal()+
+  labs(x= "月份",y="业管费/新单保费", title = "业管费使用效率(业管费/新单保费 )-银保")
+
+
+   p67y<- ggplotly( p67y )
+   p67y  
+```
+
+## （六）手续费佣金分析
+
+### 10.1 佣金和手续费分渠道与产品展示图-本月
+
+（单位:元）
+
+注：渠道和产品组合大于100万
+
+```{r echo = FALSE  , fig.height= 7, fig.width= 9 ,  message = FALSE, warning = FALSE}
+ zsq81 <- paste("select 
+                  case 
+                  when [科目] between  '6402010000' and '6402010102' then '手续费'
+                  when 科目 like '64210403%' then '手续费'
+                  when [科目] between  '6402010201' and '6402010300' then '佣金'
+                  when [科目] between  '6421020100' and '6421040200' then '佣金'
+                  else 科目 end as 一级科目, [产品描述], [渠道描述] , sum(本期余额) as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 = " ,zmonth , "
+              and ( 科目 like  '6421%'  or  科目 like  '640201%')
+              group  by [产品描述], [渠道描述] ,case 
+                  when [科目] between  '6402010000' and '6402010102' then '手续费'
+                  when 科目 like '64210403%' then '手续费'
+                  when [科目] between  '6402010201' and '6402010300' then '佣金'
+                  when [科目] between  '6421020100' and '6421040200' then '佣金'
+                  else 科目 end   ")
+data81 <- dbGetQuery( con,zsq81)    
+data81 <- sqldf("select   一级科目, 产品描述 , 渠道描述 ,   round(sum(本年新增),2) as 本年新增   
+                  from  data81 group by   一级科目, 产品描述 , 渠道描述  having round(sum(本年新增),2)  > 1000000 ")
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c(as.character(data81$"一级科目"),as.character(data81$"产品描述"),  as.character(data81$"渠道描述")))  
+Nodes <- data.frame(name = all_nodes)  
+ 
+# 合并一级科目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf("select  一级科目 as Source, 产品描述 as Target , sum(本年新增) as Value  ,  ''  as 'source_id' ,'' as 'target_id'  
+                      from data81
+                      group by 一级科目 ,产品描述 
+                      union all 
+                 select  产品描述 as Source, 渠道描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from data81
+                      group by 产品描述, 渠道描述 ") 
+ 
+Nodes$name <- c(as.character(Nodes$name))
+links3$source <- as.character(links3$source)  
+links3$target <- as.character(links3$target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+p81 <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                #      LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 15,  
+                      nodeWidth = 30,  
+                      units = "元")  
+  
+# 展示桑基图  
+p81
+```
+
+### 10.2 佣金和手续费分渠道与产品展示图-本年
+
+（单位:元）
+
+注：渠道和产品组合大于1千万
+
+```{r echo = FALSE  , fig.height= 7, fig.width= 9,  message = FALSE, warning = FALSE}
+ zsq82 <- paste("select 
+                  case 
+                  when [科目] between  '6402010000' and '6402010102' then '手续费'
+                  when 科目 like '64210403%' then '手续费'
+                  when [科目] between  '6402010201' and '6402010300' then '佣金'
+                  when [科目] between  '6421020100' and '6421040200' then '佣金'
+                  else 科目 end as 一级科目, [产品描述], [渠道描述] , sum(本期余额) as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and ( 科目 like  '6421%'  or  科目 like  '640201%')
+              group  by [产品描述], [渠道描述] ,case 
+                  when [科目] between  '6402010000' and '6402010102' then '手续费'
+                  when 科目 like '64210403%' then '手续费'
+                  when [科目] between  '6402010201' and '6402010300' then '佣金'
+                  when [科目] between  '6421020100' and '6421040200' then '佣金'
+                  else 科目 end   ")
+data82 <- dbGetQuery( con,zsq82)  
+data82 <- sqldf("select   一级科目, 产品描述 , 渠道描述 ,   round(sum(本年新增),2) as 本年新增   
+                  from  data82 group by   一级科目, 产品描述 , 渠道描述  having round(sum(本年新增),2)  > 10000000 ")
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c(as.character(data82$"一级科目"),as.character(data82$"产品描述"),  as.character(data82$"渠道描述")))  
+Nodes <- data.frame(name = all_nodes)  
+ 
+# 合并一级科目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf("select  一级科目 as Source, 产品描述 as Target , sum(本年新增) as Value  ,  ''  as 'source_id' ,'' as 'target_id'  
+                      from data82
+                      group by 一级科目 ,产品描述 
+                      union all 
+                 select  产品描述 as Source, 渠道描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from data82
+                      group by 产品描述, 渠道描述 ") 
+ 
+Nodes$name <- c(as.character(Nodes$name))
+links3$source <- as.character(links3$source)  
+links3$target <- as.character(links3$target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+p82 <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                #      LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 15,  
+                      nodeWidth = 30,  
+                      units = "元")  
+  
+# 展示桑基图  
+p82
+ 
+```
+
+
+# 三、利润表项目-收入类
+
+### （一）保费收入-变动
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE}
+
+zsql <- paste("select 会计年度 ,会计期间, 科目,sum(本期余额)  as 本期余额  ,sum(期末余额) as 期末余额
+              from [DJSX].[dbo].[balance_test]
+              where    科目 like '6%' 
+              AND  [会计年度] >=  2022
+              group by 会计年度 ,会计期间,科目
+                 ")
+data6 <- dbGetQuery( con,zsql)
+
+
+zacct = 6031
+zacctname = '保费收入'
+zsql <- paste("select 会计年度 ,会计期间, sum(本期余额)  as 本期余额  ,sum(期末余额) as 期末余额
+              from data6
+              where   substr(科目,1,4)*1   = ", zacct ," 
+              group by 会计年度 ,会计期间 ")
+data6z <- sqldf(zsql)
+# 使用ggplot2包绘制折线图  
+plot <- ggplot(data6z, aes(x = as.character(会计期间), y = -本期余额/100000000, group = 会计年度, colour = 会计年度)) +  
+  geom_line(size = 1) + # 设置线条粗细为1.5  
+  labs(title = "实线为每月变动；虚线为累计变动", x = "月份", y = "本期余额（亿元）") +   scale_color_manual(values = c("red", "blue", "green"))  
+
+sec.axis.coef <- 1  
+# 这个系数需要根据实际情况调整；假设两个变量的量纲相同，因此系数可以简单设为1
+
+# 使用sec.axis参数添加副y轴和相应的线  
+plot <- plot +  
+  geom_line(aes(y = -期末余额/100000000 * sec.axis.coef), # 乘以系数以匹配主y轴  
+            data = data6z, # 指定用于这条线的数据（如果需要，可以是data6z的一个子集）  
+            size = 1, linetype = "dashed") + # 设置线条粗细和类型  
+  scale_y_continuous(sec.axis = sec_axis(~ . / sec.axis.coef, name = "期末余额（亿元）")) # 添加副y轴，并设置其标签 
+
+dataout <- sqldf(paste("select 会计年度,会计期间,- 本期余额 as 本期余额 , - 期末余额  AS 期末余额  from data6z where 会计年度 = " ,zyear  ))
+dataout <- dataout %>%  
+    mutate(本期余额 = comma(本期余额),期末余额 = comma(期末余额)) #  
+print(dataout)
+# 
+# ggsave(paste(flag ,zacct,".png",sep = ""), plot = plot  , width = 8, height = 4, dpi = 150)
+# picname = paste(flag ,zacct,".png",sep = "")
+# knitr::include_graphics(paste(adrr1,picname,sep = ""))
+plot<- ggplotly( plot )
+     plot
+```
+
+#### 1.1当年累计分布情况(只含科目、产品、渠道维度超过1亿的数据）
+
+```{r echo=FALSE  , fig.height= 7, fig.width= 9 ,  message=FALSE, warning=FALSE}
+zsql <- paste("select   
+              产品描述 ,
+              科目描述, 
+              渠道描述,
+                - sum(本期余额)/100000000 as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and 一级科目 like '6031%'
+              group  by  
+              产品描述 ,
+              科目描述, 
+              渠道描述
+              having sum(本期余额) <=  -100000000  ")
+datasj <- dbGetQuery( con,zsql)
+
+datasj1 <- sqldf("select distinct 产品描述 ,sum(本年新增)  from  datasj  group by  产品描述 order by  sum(本年新增) desc ")
+datasj2 <- sqldf("select distinct 科目描述 ,sum(本年新增)  from  datasj  group by  科目描述 order by  sum(本年新增) desc ")
+datasj3 <- sqldf("select distinct 渠道描述 ,sum(本年新增)  from  datasj  group by  渠道描述 order by  sum(本年新增) desc ")
+
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( as.character(datasj1$"产品描述"),  
+                       as.character(datasj2$"科目描述"),  
+                       as.character(datasj3$"渠道描述") ))  
+Nodes <- data.frame(name = all_nodes)  
+# 合并项目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf(" 
+                 select  产品描述 as Source  , 科目描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 产品描述, 科目描述 
+                union all 
+                 select  科目描述 as Source  , 渠道描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 科目描述, 渠道描述   ") 
+Nodes$name <- c(as.character(Nodes$name))
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 10,  
+                      nodeWidth = 30,  
+                      units = "亿元")  
+# 展示桑基图  
+plot 
+
+
+```
+
+### （二）利息收入-变动
+
+```{r echo=FALSE    ,  message=FALSE, warning=FALSE}
+zacct = 6011
+zacctname = '利息收入'
+zsql <- paste("select 会计年度 ,会计期间, sum(本期余额)  as 本期余额   ,sum(期末余额) as 期末余额
+              from data6
+              where   substr(科目,1,4)*1   = ", zacct ," 
+              group by 会计年度 ,会计期间 ")
+data6z <- sqldf(zsql)
+# 使用ggplot2包绘制折线图  
+plot <- ggplot(data6z, aes(x = as.character(会计期间), y = -本期余额/100000000, group = 会计年度, colour = 会计年度)) +  
+  geom_line(size = 1) + # 设置线条粗细为1.5  
+  labs(title = "实线为每月变动；虚线为累计变动", x = "月份", y = "本期余额（亿元）") +   scale_color_manual(values = c("red", "blue", "green"))  
+
+sec.axis.coef <- 1  
+# 这个系数需要根据实际情况调整；假设两个变量的量纲相同，因此系数可以简单设为1
+
+# 使用sec.axis参数添加副y轴和相应的线  
+plot <- plot +  
+  geom_line(aes(y = -期末余额/100000000 * sec.axis.coef), # 乘以系数以匹配主y轴  
+            data = data6z, # 指定用于这条线的数据（如果需要，可以是data6z的一个子集）  
+            size = 1, linetype = "dashed") + # 设置线条粗细和类型  
+  scale_y_continuous(sec.axis = sec_axis(~ . / sec.axis.coef, name = "期末余额（亿元）")) # 添加副y轴，并设置其标签 
+
+dataout <- sqldf(paste("select 会计年度,会计期间,- 本期余额 as 本期余额 , - 期末余额  AS 期末余额  from data6z where 会计年度 = " ,zyear  ))
+dataout <- dataout %>%  
+    mutate(本期余额 = comma(本期余额),期末余额 = comma(期末余额)) #  
+print(dataout)
+
+# ggsave(paste(flag ,zacct,".png",sep = ""), plot = plot  , width = 8, height = 4, dpi = 150)
+# picname = paste(flag ,zacct,".png",sep = "")
+# knitr::include_graphics(paste(adrr1,picname,sep = ""))
+plot<- ggplotly( plot )
+     plot
+```
+
+#### 2.1当年累计分布情况
+
+```{r echo=FALSE , fig.height= 7, fig.width= 9,  message=FALSE, warning=FALSE}
+
+zsql <- paste("select  会计期间, 
+              科目描述, 
+              case when 金融产品类型描述 = '' or  金融产品类型描述 = '其他' or  金融产品类型描述 like  '%冻结%' then '其他' else 金融产品类型描述 end as 金融产品类型描述 ,
+                - sum(本期余额)/100000000 as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and 一级科目 like '6011%'
+              group  by  
+              会计期间 ,
+              科目描述, 
+              case when 金融产品类型描述 = '' or  金融产品类型描述 = '其他' or  金融产品类型描述 like  '%冻结%' then '其他' else 金融产品类型描述 end
+                 ")
+datasj <- dbGetQuery( con,zsql)  
+
+datasj1 <- sqldf("select distinct 会计期间 ,sum(本年新增)  from  datasj  group by  会计期间 order by  sum(本年新增) desc ")
+datasj2 <- sqldf("select distinct 科目描述 ,sum(本年新增)  from  datasj  group by  科目描述 order by  sum(本年新增) desc ")
+datasj3 <- sqldf("select distinct 金融产品类型描述 ,sum(本年新增)  from  datasj  group by  金融产品类型描述 order by  sum(本年新增) desc ")
+
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( as.character(datasj1$"会计期间"),  
+                       as.character(datasj2$"科目描述"),  
+                       as.character(datasj3$"金融产品类型描述") ))  
+Nodes <- data.frame(name = all_nodes)  
+# 合并项目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf(" 
+                 select  会计期间 as Source  , 科目描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 会计期间, 科目描述 
+                union all 
+                 select  科目描述 as Source  , 金融产品类型描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 科目描述, 金融产品类型描述   ") 
+Nodes$name <- c(as.character(Nodes$name))
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 10,  
+                      nodeWidth = 30,  
+                      units = "亿元")  
+# 展示桑基图  
+plot 
+
+
+
+```
+
+### （三）投资收益-变动
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE}
+zacct = 6111
+zacctname = '投资收益'
+zsql <- paste("select 会计年度 ,会计期间, sum(本期余额)  as 本期余额   ,sum(期末余额) as 期末余额
+              from data6
+              where   substr(科目,1,4)*1   = ", zacct ," 
+              group by 会计年度 ,会计期间 ")
+data6z <- sqldf(zsql)
+# 使用ggplot2包绘制折线图  
+plot <- ggplot(data6z, aes(x = as.character(会计期间), y = -本期余额/100000000, group = 会计年度, colour = 会计年度)) +  
+  geom_line(size = 1) + # 设置线条粗细为1.5  
+  labs(title = "实线为每月变动；虚线为累计变动", x = "月份", y = "本期余额（亿元）") +   scale_color_manual(values = c("red", "blue", "green"))  
+
+sec.axis.coef <- 1  
+# 这个系数需要根据实际情况调整；假设两个变量的量纲相同，因此系数可以简单设为1
+
+# 使用sec.axis参数添加副y轴和相应的线  
+plot <- plot +  
+  geom_line(aes(y = -期末余额/100000000 * sec.axis.coef), # 乘以系数以匹配主y轴  
+            data = data6z, # 指定用于这条线的数据（如果需要，可以是data6z的一个子集）  
+            size = 1, linetype = "dashed") + # 设置线条粗细和类型  
+  scale_y_continuous(sec.axis = sec_axis(~ . / sec.axis.coef, name = "期末余额（亿元）")) # 添加副y轴，并设置其标签 
+
+dataout <- sqldf(paste("select 会计年度,会计期间,- 本期余额 as 本期余额 , - 期末余额  AS 期末余额  from data6z where 会计年度 = " ,zyear  ))
+dataout <- dataout %>%  
+    mutate(本期余额 = comma(本期余额),期末余额 = comma(期末余额)) #  
+print(dataout)
+
+# ggsave(paste(flag ,zacct,".png",sep = ""), plot = plot  , width = 8, height = 4, dpi = 150)
+# picname = paste(flag ,zacct,".png",sep = "")
+# knitr::include_graphics(paste(adrr1,picname,sep = ""))
+plot<- ggplotly( plot )
+     plot
+```
+
+#### 3.1当年累计“投资收益”为**正**分布情况-（科目-分类-月份）
+
+```{r echo=FALSE  , fig.height= 7, fig.width= 9 ,  message=FALSE, warning=FALSE}
+
+zsql <- paste("select  会计期间, 
+              科目描述, 
+              case when 金融产品类型描述 = '' or  金融产品类型描述 = '其他' or  金融产品类型描述 like  '%冻结%' then '其他' else 金融产品类型描述 end as 金融产品类型描述 ,
+                - sum(本期余额)/100000000 as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and 一级科目 like '6111%'
+              group  by  
+              会计期间 ,
+              科目描述, 
+              case when 金融产品类型描述 = '' or  金融产品类型描述 = '其他' or  金融产品类型描述 like  '%冻结%' then '其他' else 金融产品类型描述 end
+              having     sum(本期余额) < -100 
+                 ")
+datasj <- dbGetQuery( con,zsql)
+
+print(paste("正投资收益数（亿元）：" ,sqldf("select sum(本年新增) from datasj ")))
+
+datasj1 <- sqldf("select distinct 科目描述 ,sum(本年新增)  from  datasj  group by  科目描述 order by  sum(本年新增) desc ")
+datasj2 <- sqldf("select distinct 金融产品类型描述 ,sum(本年新增)  from  datasj  group by  金融产品类型描述 order by  sum(本年新增) desc ")
+datasj3 <- sqldf("select distinct 会计期间 ,sum(本年新增)  from  datasj  group by  会计期间 order by  sum(本年新增) desc ")
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( 
+                       as.character(datasj1$"科目描述"),  
+                       as.character(datasj2$"金融产品类型描述"), 
+                       as.character(datasj3$"会计期间")  ))  
+Nodes <- data.frame(name = all_nodes)  
+# 合并项目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf(" 
+                 select  科目描述 as Source  , 金融产品类型描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 科目描述, 金融产品类型描述   
+                union all 
+                 select  金融产品类型描述 as Source  , 会计期间 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 金融产品类型描述, 会计期间 
+
+                ") 
+Nodes$name <- c(as.character(Nodes$name))
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 10,  
+                      nodeWidth = 30,  
+                      units = "亿元")  
+# 展示桑基图  
+plot 
+
+
+
+```
+
+#### 3.2当年累计“投资收益”为**负**分布情况-（科目-分类-月份）
+
+```{r echo=FALSE  , fig.height= 7, fig.width= 9 ,   message=FALSE, warning=FALSE}
+
+zsql <- paste("select  会计期间, 
+              科目描述, 
+              case when 金融产品类型描述 = '' or  金融产品类型描述 = '其他' or  金融产品类型描述 like  '%冻结%' then '其他' else 金融产品类型描述 end as 金融产品类型描述 ,
+               sum(本期余额)/100000000  as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and 一级科目 like '6111%'
+              group  by  
+              会计期间 ,
+              科目描述, 
+              case when 金融产品类型描述 = '' or  金融产品类型描述 = '其他' or  金融产品类型描述 like  '%冻结%' then '其他' else 金融产品类型描述 end
+              having   sum(本期余额) > 10000    ")
+datasj <- dbGetQuery( con,zsql)
+
+print(paste("负投资收益金额（亿元）：" ,sqldf("select sum(本年新增) from datasj ")))
+
+datasj1 <- sqldf("select distinct 科目描述 ,sum(本年新增)  from  datasj  group by  科目描述 order by  sum(本年新增) desc ")
+datasj2 <- sqldf("select distinct 金融产品类型描述 ,sum(本年新增)  from  datasj  group by  金融产品类型描述 order by  sum(本年新增) desc ")
+datasj3 <- sqldf("select distinct 会计期间 ,sum(本年新增)  from  datasj  group by  会计期间 order by  sum(本年新增) desc ")
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( 
+                       as.character(datasj1$"科目描述"),  
+                       as.character(datasj2$"金融产品类型描述"), 
+                       as.character(datasj3$"会计期间")  ))  
+Nodes <- data.frame(name = all_nodes)  
+# 合并项目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf(" 
+                 select  科目描述 as Source  , 金融产品类型描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 科目描述, 金融产品类型描述   
+                union all 
+                 select  金融产品类型描述 as Source  , 会计期间 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 金融产品类型描述, 会计期间 
+
+                ") 
+Nodes$name <- c(as.character(Nodes$name))
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 10,  
+                      nodeWidth = 30,  
+                      units = "亿元")  
+# 展示桑基图  
+plot 
+
+```
+
+### （四）公允价值变动损益-变动
+
+```{r echo=FALSE,    message=FALSE, warning=FALSE}
+zacct = 6101 
+zacctname = '公允价值变动损益'
+zsql <- paste("select 会计年度 ,会计期间, sum(本期余额)  as 本期余额   ,sum(期末余额) as 期末余额
+              from data6
+              where   substr(科目,1,4)*1   = ", zacct ," 
+              group by 会计年度 ,会计期间 ")
+data6z <- sqldf(zsql)
+# 使用ggplot2包绘制折线图  
+plot <- ggplot(data6z, aes(x = as.character(会计期间), y = -本期余额/100000000, group = 会计年度, colour = 会计年度)) +  
+  geom_line(size = 1) + # 设置线条粗细为1.5  
+  labs(title = "实线为每月变动；虚线为累计变动", x = "月份", y = "本期余额（亿元）") +   scale_color_manual(values = c("red", "blue", "green"))  
+
+sec.axis.coef <- 1  
+# 这个系数需要根据实际情况调整；假设两个变量的量纲相同，因此系数可以简单设为1
+
+# 使用sec.axis参数添加副y轴和相应的线  
+plot <- plot +  
+  geom_line(aes(y = -期末余额/100000000 * sec.axis.coef), # 乘以系数以匹配主y轴  
+            data = data6z, # 指定用于这条线的数据（如果需要，可以是data6z的一个子集）  
+            size = 1, linetype = "dashed") + # 设置线条粗细和类型  
+  scale_y_continuous(sec.axis = sec_axis(~ . / sec.axis.coef, name = "期末余额（亿元）")) # 添加副y轴，并设置其标签 
+
+dataout <- sqldf(paste("select 会计年度,会计期间,- 本期余额 as 本期余额 , - 期末余额  AS 期末余额  from data6z where 会计年度 = " ,zyear  ))
+dataout <- dataout %>%  
+    mutate(本期余额 = comma(本期余额),期末余额 = comma(期末余额)) #  
+print(dataout)
+
+# ggsave(paste(flag ,zacct,".png",sep = ""), plot = plot  , width = 8, height = 4, dpi = 150)
+# picname = paste(flag ,zacct,".png",sep = "")
+# knitr::include_graphics(paste(adrr1,picname,sep = ""))
+plot<- ggplotly( plot )
+     plot
+```
+
+#### 4.1当年累计“公允价值变动”为**正**分布情况-（科目-分类-月份）
+
+```{r echo=FALSE  , fig.height= 7, fig.width= 9 , message=FALSE, warning=FALSE}
+
+zsql <- paste("select  会计期间, 
+              科目描述, 
+              case when 金融产品类型描述 = '' or  金融产品类型描述 = '其他' or  金融产品类型描述 like  '%冻结%' then '其他' else 金融产品类型描述 end as 金融产品类型描述 ,
+               - sum(本期余额)  as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and 一级科目 like '6101%'
+              group  by  
+              会计期间 ,
+              科目描述, 
+              case when 金融产品类型描述 = '' or  金融产品类型描述 = '其他' or  金融产品类型描述 like  '%冻结%' then '其他' else 金融产品类型描述 end
+              having   sum(本期余额) < -10000    ")
+datasj <- dbGetQuery( con,zsql)
+
+print(paste("公允价值变动金额（亿元）：" ,sqldf("select sum(本年新增) from datasj ")))
+
+datasj1 <- sqldf("select distinct 科目描述 ,sum(本年新增)  from  datasj  group by  科目描述 order by  sum(本年新增) desc ")
+datasj2 <- sqldf("select distinct 金融产品类型描述 ,sum(本年新增)  from  datasj  group by  金融产品类型描述 order by  sum(本年新增) desc ")
+datasj3 <- sqldf("select distinct 会计期间 ,sum(本年新增)  from  datasj  group by  会计期间 order by  sum(本年新增) desc ")
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( 
+                       as.character(datasj1$"科目描述"),  
+                       as.character(datasj2$"金融产品类型描述"), 
+                       as.character(datasj3$"会计期间")  ))  
+Nodes <- data.frame(name = all_nodes)  
+# 合并项目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf(" 
+                 select  科目描述 as Source  , 金融产品类型描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 科目描述, 金融产品类型描述   
+                union all 
+                 select  金融产品类型描述 as Source  , 会计期间 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 金融产品类型描述, 会计期间 
+
+                ") 
+Nodes$name <- c(as.character(Nodes$name))
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 10,  
+                      nodeWidth = 30,  
+                      units = "元")  
+# 展示桑基图  
+plot 
+
+```
+
+#### 4.2当年累计“公允价值变动”为**负**分布情况-（科目-分类-月份）
+
+```{r echo=FALSE  , fig.height= 7, fig.width= 9 ,  message=FALSE, warning=FALSE}
+
+zsql <- paste("select  会计期间, 
+              科目描述, 
+              case when 金融产品类型描述 = '' or  金融产品类型描述 = '其他' or  金融产品类型描述 like  '%冻结%' then '其他' else 金融产品类型描述 end as 金融产品类型描述 ,
+               sum(本期余额)  as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and 一级科目 like '6101%'
+              group  by  
+              会计期间 ,
+              科目描述, 
+              case when 金融产品类型描述 = '' or  金融产品类型描述 = '其他' or  金融产品类型描述 like  '%冻结%' then '其他' else 金融产品类型描述 end
+              having   sum(本期余额) > 10000    ")
+datasj <- dbGetQuery( con,zsql)
+
+print(paste("负公允价值变动金额（亿元）：" ,sqldf("select sum(本年新增) from datasj ")))
+
+datasj1 <- sqldf("select distinct 科目描述 ,sum(本年新增)  from  datasj  group by  科目描述 order by  sum(本年新增) desc ")
+datasj2 <- sqldf("select distinct 金融产品类型描述 ,sum(本年新增)  from  datasj  group by  金融产品类型描述 order by  sum(本年新增) desc ")
+datasj3 <- sqldf("select distinct 会计期间 ,sum(本年新增)  from  datasj  group by  会计期间 order by  sum(本年新增) desc ")
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( 
+                       as.character(datasj1$"科目描述"),  
+                       as.character(datasj2$"金融产品类型描述"), 
+                       as.character(datasj3$"会计期间")  ))  
+Nodes <- data.frame(name = all_nodes)  
+# 合并项目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf(" 
+                 select  科目描述 as Source  , 金融产品类型描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 科目描述, 金融产品类型描述   
+                union all 
+                 select  金融产品类型描述 as Source  , 会计期间 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 金融产品类型描述, 会计期间 
+
+                ") 
+Nodes$name <- c(as.character(Nodes$name))
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 10,  
+                      nodeWidth = 30,  
+                      units = "元")  
+# 展示桑基图  
+plot 
+
+```
+
+### （五）其他业务收入-变动
+
+```{r echo=FALSE,   message=FALSE, warning=FALSE}
+zacct = 6051
+zacctname = '其他业务收入'
+zsql <- paste("select 会计年度 ,会计期间, sum(本期余额)  as 本期余额   ,sum(期末余额) as 期末余额
+              from data6
+              where   substr(科目,1,4)*1   = ", zacct ," 
+              group by 会计年度 ,会计期间 ")
+data6z <- sqldf(zsql)
+# 使用ggplot2包绘制折线图  
+plot <- ggplot(data6z, aes(x = as.character(会计期间), y = -本期余额/100000000, group = 会计年度, colour = 会计年度)) +  
+  geom_line(size = 1) + # 设置线条粗细为1.5  
+  labs(title = "实线为每月变动；虚线为累计变动", x = "月份", y = "本期余额（亿元）") +   scale_color_manual(values = c("red", "blue", "green"))  
+
+sec.axis.coef <- 1  
+# 这个系数需要根据实际情况调整；假设两个变量的量纲相同，因此系数可以简单设为1
+
+# 使用sec.axis参数添加副y轴和相应的线  
+plot <- plot +  
+  geom_line(aes(y = -期末余额/100000000 * sec.axis.coef), # 乘以系数以匹配主y轴  
+            data = data6z, # 指定用于这条线的数据（如果需要，可以是data6z的一个子集）  
+            size = 1, linetype = "dashed") + # 设置线条粗细和类型  
+  scale_y_continuous(sec.axis = sec_axis(~ . / sec.axis.coef, name = "期末余额（亿元）")) # 添加副y轴，并设置其标签 
+
+dataout <- sqldf(paste("select 会计年度,会计期间,- 本期余额 as 本期余额 , - 期末余额  AS 期末余额  from data6z where 会计年度 = " ,zyear  ))
+dataout <- dataout %>%  
+    mutate(本期余额 = comma(本期余额),期末余额 = comma(期末余额)) #  
+print(dataout)
+# 
+# ggsave(paste(flag ,zacct,".png",sep = ""), plot = plot  , width = 8, height = 4, dpi = 150)
+# picname = paste(flag ,zacct,".png",sep = "")
+# knitr::include_graphics(paste(adrr1,picname,sep = ""))
+plot<- ggplotly( plot )
+     plot
+```
+
+#### 5.1当年累计分布情况-（月份-科目）
+
+```{r echo=FALSE , fig.height= 7, fig.width= 9 ,  message=FALSE, warning=FALSE}
+
+zsql <- paste("select  会计期间, 
+              科目描述  ,
+                - sum(本期余额) as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and 一级科目 like '6051%'
+              group  by  
+              会计期间 ,
+              科目描述 
+                 ")
+datasj <- dbGetQuery( con,zsql)  
+
+datasj1 <- sqldf("select distinct 会计期间 ,sum(本年新增)  from  datasj  group by  会计期间 order by  sum(本年新增) desc ")
+datasj2 <- sqldf("select distinct 科目描述 ,sum(本年新增)  from  datasj  group by  科目描述 order by  sum(本年新增) desc ")
+ 
+
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( as.character(datasj1$"会计期间"),  
+                       as.character(datasj2$"科目描述")  ))  
+Nodes <- data.frame(name = all_nodes)  
+# 合并项目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf(" 
+                 select  会计期间 as Source  , 科目描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 会计期间, 科目描述 
+                  ") 
+Nodes$name <- c(as.character(Nodes$name))
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 10,  
+                      nodeWidth = 30,  
+                      units = "元")  
+# 展示桑基图  
+plot 
+
+```
+
+### （六）汇兑损益-变动
+
+```{r echo=FALSE,   message=FALSE, warning=FALSE}
+zacct = 6061
+zacctname = '汇兑损益'
+zsql <- paste("select 会计年度 ,会计期间, sum(本期余额)  as 本期余额   ,sum(期末余额) as 期末余额
+              from data6
+              where   substr(科目,1,4)*1   = ", zacct ," 
+              group by 会计年度 ,会计期间 ")
+data6z <- sqldf(zsql)
+# 使用ggplot2包绘制折线图  
+plot <- ggplot(data6z, aes(x = as.character(会计期间), y = -本期余额/100000000, group = 会计年度, colour = 会计年度)) +  
+  geom_line(size = 1) + # 设置线条粗细为1.5  
+  labs(title = "实线为每月变动；虚线为累计变动", x = "月份", y = "本期余额（亿元）") +   scale_color_manual(values = c("red", "blue", "green"))  
+
+sec.axis.coef <- 1  
+# 这个系数需要根据实际情况调整；假设两个变量的量纲相同，因此系数可以简单设为1
+
+# 使用sec.axis参数添加副y轴和相应的线  
+plot <- plot +  
+  geom_line(aes(y = -期末余额/100000000 * sec.axis.coef), # 乘以系数以匹配主y轴  
+            data = data6z, # 指定用于这条线的数据（如果需要，可以是data6z的一个子集）  
+            size = 1, linetype = "dashed") + # 设置线条粗细和类型  
+  scale_y_continuous(sec.axis = sec_axis(~ . / sec.axis.coef, name = "期末余额（亿元）")) # 添加副y轴，并设置其标签 
+
+dataout <- sqldf(paste("select 会计年度,会计期间,- 本期余额 as 本期余额 , - 期末余额  AS 期末余额  from data6z where 会计年度 = " ,zyear  ))
+dataout <- dataout %>%  
+    mutate(本期余额 = comma(本期余额),期末余额 = comma(期末余额)) #  
+print(dataout)
+# 
+# ggsave(paste(flag ,zacct,".png",sep = ""), plot = plot  , width = 8, height = 4, dpi = 150)
+# picname = paste(flag ,zacct,".png",sep = "")
+# knitr::include_graphics(paste(adrr1,picname,sep = ""))
+plot<- ggplotly( plot )
+     plot
+```
+
+### （七）资产处置损益-变动
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE}
+zacct = 6302
+zacctname = '资产处置损益'
+zsql <- paste("select 会计年度 ,会计期间, sum(本期余额)  as 本期余额   ,sum(期末余额) as 期末余额
+              from data6
+              where   substr(科目,1,4)*1   = ", zacct ," 
+              group by 会计年度 ,会计期间 ")
+data6z <- sqldf(zsql)
+# 使用ggplot2包绘制折线图  
+plot <- ggplot(data6z, aes(x = as.character(会计期间), y = -本期余额/100000000, group = 会计年度, colour = 会计年度)) +  
+  geom_line(size = 1) + # 设置线条粗细为1.5  
+  labs(title = "实线为每月变动；虚线为累计变动", x = "月份", y = "本期余额（亿元）") +   scale_color_manual(values = c("red", "blue", "green"))  
+
+sec.axis.coef <- 1  
+# 这个系数需要根据实际情况调整；假设两个变量的量纲相同，因此系数可以简单设为1
+
+# 使用sec.axis参数添加副y轴和相应的线  
+plot <- plot +  
+  geom_line(aes(y = -期末余额/100000000 * sec.axis.coef), # 乘以系数以匹配主y轴  
+            data = data6z, # 指定用于这条线的数据（如果需要，可以是data6z的一个子集）  
+            size = 1, linetype = "dashed") + # 设置线条粗细和类型  
+  scale_y_continuous(sec.axis = sec_axis(~ . / sec.axis.coef, name = "期末余额（亿元）")) # 添加副y轴，并设置其标签 
+
+dataout <- sqldf(paste("select 会计年度,会计期间,- 本期余额 as 本期余额 , - 期末余额  AS 期末余额  from data6z where 会计年度 = " ,zyear  ))
+dataout <- dataout %>%  
+    mutate(本期余额 = comma(本期余额),期末余额 = comma(期末余额)) #  
+print(dataout)
+
+# ggsave(paste(flag ,zacct,".png",sep = ""), plot = plot  , width = 8, height = 4, dpi = 150)
+# picname = paste(flag ,zacct,".png",sep = "")
+# knitr::include_graphics(paste(adrr1,picname,sep = ""))
+plot<- ggplotly( plot )
+     plot
+```
+
+# 四、利润表项目-支出类
+
+### （一）业务及管理费-变动
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE}
+zacct = 6601
+zacctname = '业务及管理费'
+zsql <- paste("select 会计年度 ,会计期间, sum(本期余额)  as 本期余额   ,sum(期末余额) as 期末余额
+              from data6
+              where   substr(科目,1,4)*1   = ", zacct ," 
+              group by 会计年度 ,会计期间 ")
+data6z <- sqldf(zsql)
+# 使用ggplot2包绘制折线图  
+plot <- ggplot(data6z, aes(x = as.character(会计期间), y = 本期余额/100000000, group = 会计年度, colour = 会计年度)) +  
+  geom_line(size = 1) + # 设置线条粗细为1.5  
+  labs(title = "实线为每月变动；虚线为累计变动", x = "月份", y = "本期余额（亿元）") +   scale_color_manual(values = c("red", "blue", "green"))  
+
+sec.axis.coef <- 1  
+# 这个系数需要根据实际情况调整；假设两个变量的量纲相同，因此系数可以简单设为1
+# 使用sec.axis参数添加副y轴和相应的线  
+plot <- plot +  
+  geom_line(aes(y = 期末余额/100000000 * sec.axis.coef), # 乘以系数以匹配主y轴  
+            data = data6z, # 指定用于这条线的数据（如果需要，可以是data6z的一个子集）  
+            size = 1, linetype = "dashed") + # 设置线条粗细和类型  
+  scale_y_continuous(sec.axis = sec_axis(~ . / sec.axis.coef, name = "期末余额（亿元）")) # 添加副y轴，并设置其标签 
+
+dataout <- sqldf(paste("select 会计年度,会计期间,  本期余额 ,   期末余额   from data6z where 会计年度 = " ,zyear  ))
+dataout <- dataout %>%  
+    mutate(本期余额 = comma(本期余额),期末余额 = comma(期末余额)) #  
+print(dataout)
+# 
+# ggsave(paste(flag ,zacct,".png",sep = ""), plot = plot  , width = 8, height = 4, dpi = 150)
+# picname = paste(flag ,zacct,".png",sep = "")
+# knitr::include_graphics(paste(adrr1,picname,sep = ""))
+plot<- ggplotly( plot )
+     plot
+```
+
+#### 1.1分机构业管费利用率
+
+```{r echo=FALSE,   message=FALSE, warning=FALSE}
+zsql <- paste("with temp as (
+SELECT   [分公司] ,'业管费' as 类型 ,  sum([本期余额]) as 本年累计   FROM [DJSX].[dbo].[balance_test]
+where [科目] like '6601%'
+and [公司代码] not like '20%'
+and 会计年度 =  ", zyear , " and 会计期间 <= ", zmonth ," 
+group by [分公司]
+union all 
+SELECT   [分公司] ,'规模新单保费' as 类型 , - sum([本期余额])   FROM [DJSX].[dbo].[balance_test]
+where  ( ( [科目] like '603101%'  and [产品描述] not like '%万能%')  or  [科目] like '2711101%'   or  [科目] =  '2721010100' )
+and [公司代码] not like '20%'
+and 会计年度 =  ", zyear , " and 会计期间 <= ", zmonth ," 
+group by [分公司] 
+union all 
+SELECT   [分公司] ,'会计新单保费' as 类型 ,  -sum([本期余额])   FROM [DJSX].[dbo].[balance_test]
+where  ( [科目] like '603101%' )  
+and [公司代码] not like '20%'
+and 会计年度 =  ", zyear , " and 会计期间 <= ", zmonth ," 
+group by [分公司] )
+
+select 分公司,
+'利用率@会计新单保费' as 类型, 
+sum(case when 类型 = '业管费' then 本年累计 else 0 end )/ sum(case when 类型 = '会计新单保费' then 本年累计 else 0 end ) as  利用率,
+round(sum(case when 类型 = '业管费' then 本年累计 else 0 end ),2) as 业管费,
+round(sum(case when 类型 = '会计新单保费' then 本年累计 else 0 end ),2) as 新单保费
+from temp
+group by 分公司
+union all 
+select 分公司,
+'利用率@规模新单保费' as 类型, 
+sum(case when 类型 = '业管费' then 本年累计 else 0 end )/ sum(case when 类型 = '规模新单保费' then 本年累计 else 0 end ) as  利用率,
+round(sum(case when 类型 = '业管费' then 本年累计 else 0 end ),2) as 业管费 ,
+round(sum(case when 类型 = '规模新单保费' then 本年累计 else 0 end ),2) as 新单保费
+from temp
+group by 分公司  ")
+data <-  dbGetQuery( con, zsql)
+
+data_sorted <- data[order(data$利用率), ]  
+data_sorted$分公司 <- factor(data_sorted$分公司, levels = unique(data_sorted$分公司)) 
+ 
+plot <- ggplot(data_sorted, aes(x = 分公司, y = 利用率, group = 类型, colour = 类型)) +    
+  geom_line(size = 0.5) +   
+  scale_y_continuous(breaks = seq(0.01, 0.1, by = 0.01), labels = scales::percent_format()) + 
+  labs(title = "", x = "", y = "利用率") +  
+  theme(legend.position = "bottom") # 将图例放在图表底部  
+# 添加数据点，并显示它们的值  
+plot <- plot +   
+  geom_point(size = 2) + # 添加数据点，可以调整大小  
+  geom_text(aes(label = paste0(round(利用率,4) * 100, "%")), # 将利用率转换为百分比格式，并添加百分号  
+            vjust = -0.5, # 调整文本垂直位置，使其稍微偏离数据点  
+            hjust = 0.5)  # 调整文本水平位置，使其位于数据点中心 
+  
+data <- data %>%
+  mutate(利用率 = percent(利用率, accuracy = 0.01)) # 假设您想要将'数值列名'列转换为百分比
+ 
+zacct = 66016031
+# ggsave(paste(flag ,zacct ,".png",sep = ""), plot = plot  , width = 8, height = 8, dpi = 150)
+# picname = paste(flag ,zacct,".png",sep = "")
+# knitr::include_graphics(paste(adrr1,picname,sep = ""))
+plot<- ggplotly( plot )
+     plot
+
+library(shiny)
+library(DT)
+# 使用datatable函数创建交互式表格  
+cat("单位：元")
+datatable(data,   
+          extensions = 'Buttons', # 加载按钮扩展
+          options = list(  
+            pageLength = 4, # 每页显示的行数  
+            dom = 'Bfrtip', # 显示按钮，包括导出  
+            buttons = c( 'csv', 'excel', 'pdf', 'print'),
+            lengthMenu = list(c(19, 100), c('19', '100')) 
+          ) 
+)
+
+```
+
+#### 1.2当年累计分布情况-（预算明细科目-预算大类科目-月份）
+
+（大于100万的项目）
+
+```{r echo=FALSE  , fig.height= 7, fig.width= 9 ,   message=FALSE, warning=FALSE}
+zsql <- paste("select  会计期间, 
+                          case when ( 预算科目描述 = '' or  预算科目描述 = '其他' or  预算科目描述 like  '%冻结%') then '预算科目描述其他' else 预算科目描述 end as 预算科目描述 ,
+              case when ([预算大类] = '' or  [预算大类] = '其他' or  [预算大类] like  '%冻结%' )then '预算科目其他' else [预算大类] end as 预算大类 ,
+              sum(本期余额)/1000000  as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and 一级科目 like '6601%'
+              group  by  
+              会计期间 ,  
+              case when ( 预算科目描述 = '' or  预算科目描述 = '其他' or  预算科目描述 like  '%冻结%') then '预算科目描述其他' else 预算科目描述 end   ,
+              case when ([预算大类] = '' or  [预算大类] = '其他' or  [预算大类] like  '%冻结%' )then '预算科目其他' else [预算大类] end
+              having  sum(本期余额) > 1000000")
+datasj <- dbGetQuery( con,zsql)
+
+datasj1 <- sqldf("select distinct 预算科目描述 ,sum(本年新增)  from  datasj  group by  预算科目描述 order by 预算科目描述 ")
+datasj2 <- sqldf("select distinct 预算大类 ,sum(本年新增)  from  datasj  group by  预算大类 order by  sum(本年新增) desc ")
+datasj3 <- sqldf("select distinct 会计期间 ,sum(本年新增)  from  datasj  group by  会计期间 order by  sum(本年新增) desc ")
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( 
+  as.character(datasj1$"预算科目描述"),  
+  as.character(datasj2$"预算大类"), 
+  as.character(datasj3$"会计期间")  ))  
+Nodes <- data.frame(name = all_nodes)  
+# 合并项目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf(" select  预算科目描述 as Source  , 预算大类 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 预算科目描述, 预算大类   
+                  union all 
+                  select  预算大类 as Source  , 会计期间 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 预算大类, 会计期间 ") 
+
+links3  <- links3 %>%  
+  arrange(Source,Target)  # 按照“预算科目描述”升序排序  arrange(desc(预算科目描述)) 
+Nodes$name <- c(as.character(Nodes$name))
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 10,  
+                      nodeWidth = 30,  
+                      units = "百万",
+                      iterations = 0)  
+# 展示桑基图  
+plot 
+
+```
+
+#### 1.3当年累计分布情况-（预算明细科目-部门-公司）
+
+（大于100万的项目）
+
+```{r echo=FALSE , fig.height= 7, fig.width= 9 ,   message=FALSE, warning=FALSE}
+
+zsql <- paste("select  [分公司], 
+                          case when ( 预算科目描述 = '' or  预算科目描述 = '其他' or  预算科目描述 like  '%冻结%') then '预算科目描述其他' else 预算科目描述 end as 预算科目描述 ,
+              case when ([成本中心描述] = '' or  [成本中心描述] = '其他' or  [成本中心描述] like  '%冻结%' ) then '成本中心描述其他' else [成本中心描述] end as 成本中心描述 ,
+              sum(本期余额)/1000000  as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and 一级科目 like '6601%'
+              group  by  
+               [分公司] ,  
+              case when ( 预算科目描述 = '' or  预算科目描述 = '其他' or  预算科目描述 like  '%冻结%') then '预算科目描述其他' else 预算科目描述 end   ,
+              case when ([成本中心描述] = '' or  [成本中心描述] = '其他' or  [成本中心描述] like  '%冻结%' ) then '成本中心描述其他' else [成本中心描述] end
+              having  sum(本期余额) > 1000000")
+datasj <- dbGetQuery( con,zsql)
+
+datasj1 <- sqldf("select distinct 预算科目描述 ,sum(本年新增)  from  datasj  group by  预算科目描述 order by 预算科目描述 ")
+datasj2 <- sqldf("select distinct 成本中心描述 ,sum(本年新增)  from  datasj  group by  成本中心描述 order by  sum(本年新增) desc ")
+datasj3 <- sqldf("select distinct 分公司 ,sum(本年新增)  from  datasj  group by  分公司 order by  sum(本年新增) desc ")
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( 
+  as.character(datasj1$"预算科目描述"),  
+  as.character(datasj2$"成本中心描述"), 
+  as.character(datasj3$"分公司")  ))  
+Nodes <- data.frame(name = all_nodes)  
+# 合并项目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf(" select  预算科目描述 as Source  , 成本中心描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 预算科目描述, 成本中心描述   
+                  union all 
+                  select  成本中心描述 as Source  , 分公司 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 成本中心描述, 分公司 ") 
+
+links3  <- links3 %>%  
+  arrange(Source,Target)  # 按照“预算科目描述”升序排序  arrange(desc(预算科目描述)) 
+Nodes$name <- c(as.character(Nodes$name))
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 10,  
+                      nodeWidth = 30,  
+                      units = "百万",
+                      iterations = 0)  
+# 展示桑基图  
+plot
+
+```
+
+#### 1.4当年累计分布情况-（预算明细科目-核算明细科目对照）
+
+（大于100万的项目）
+
+```{r echo=FALSE , fig.height= 7, fig.width= 9 ,   message=FALSE, warning=FALSE}
+zsql <- paste("select  case when ( 科目描述 = '' or  科目描述 = '其他' or  科目描述 like  '%冻结%') then '科目描述其他' else 科目描述 end as 科目描述 , case when ([预算科目描述] = '' or  [预算科目描述] = '其他' or  [预算科目描述] like  '%冻结%' ) then '预算科目描述其他' else [预算科目描述] end as 预算科目描述 ,  sum(本期余额)/1000000  as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and 一级科目 like '6601%'
+              group  by  
+              case when ( 科目描述 = '' or  科目描述 = '其他' or  科目描述 like  '%冻结%') then '科目描述其他' else 科目描述 end   ,
+              case when ([预算科目描述] = '' or  [预算科目描述] = '其他' or  [预算科目描述] like  '%冻结%' ) then '预算科目描述其他' else [预算科目描述] end
+              having  sum(本期余额) > 1000000")
+con <- dbConnect(odbc::odbc(), driver = "SQL Server", server = "10.10.9.57,1433",   
+                   database = "DJSX", uid = "admin", pwd = "admin")  
+datasj <- dbGetQuery( con,zsql)
+
+datasj1 <- sqldf("select distinct 科目描述 ,sum(本年新增)  from  datasj  group by  科目描述 order by 科目描述 ")
+datasj2 <- sqldf("select distinct 预算科目描述 ,sum(本年新增)  from  datasj  group by  预算科目描述 order by  sum(本年新增) desc ")
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( 
+  as.character(datasj1$"科目描述"),  
+  as.character(datasj2$"预算科目描述") ))  
+Nodes <- data.frame(name = all_nodes)  
+# 合并项目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf(" select  科目描述 as Source  , 预算科目描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 科目描述, 预算科目描述 ") 
+ 
+links3  <- links3 %>%  
+  arrange(Target)  # 按照“科目描述”升序排序  arrange(desc(科目描述)) 
+Nodes$name <- c(as.character(Nodes$name))
+links3$Source <-  as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 10,  
+                      nodeWidth = 30,  
+                      units = "百万",
+                      iterations = 0)  
+
+# 展示桑基图  
+plot 
+```
+
+### （二）退保金-变动
+
+```{r echo=FALSE,   message=FALSE, warning=FALSE}
+zacct = 6531
+zacctname = '退保金'
+zsql <- paste("select 会计年度 ,会计期间, sum(本期余额)  as 本期余额   ,sum(期末余额) as 期末余额
+              from data6
+              where   substr(科目,1,4)*1   = ", zacct ," 
+              group by 会计年度 ,会计期间 ")
+data6z <- sqldf(zsql)
+# 使用ggplot2包绘制折线图  
+plot <- ggplot(data6z, aes(x = as.character(会计期间), y = 本期余额/100000000, group = 会计年度, colour = 会计年度)) +  
+  geom_line(size = 1) + # 设置线条粗细为1.5  
+  labs(title = "实线为每月变动；虚线为累计变动", x = "月份", y = "本期余额（亿元）") +   scale_color_manual(values = c("red", "blue", "green"))  
+
+sec.axis.coef <- 1  
+# 这个系数需要根据实际情况调整；假设两个变量的量纲相同，因此系数可以简单设为1
+
+# 使用sec.axis参数添加副y轴和相应的线  
+plot <- plot +  
+  geom_line(aes(y = 期末余额/100000000 * sec.axis.coef), # 乘以系数以匹配主y轴  
+            data = data6z, # 指定用于这条线的数据（如果需要，可以是data6z的一个子集）  
+            size = 1, linetype = "dashed") + # 设置线条粗细和类型  
+  scale_y_continuous(sec.axis = sec_axis(~ . / sec.axis.coef, name = "期末余额（亿元）")) # 添加副y轴，并设置其标签 
+
+dataout <- sqldf(paste("select 会计年度,会计期间, 本期余额 ,   期末余额   from data6z where 会计年度 = " ,zyear  ))
+dataout <- dataout %>%  
+    mutate(本期余额 = comma(本期余额),期末余额 = comma(期末余额)) #  
+print(dataout)
+# 
+# ggsave(paste(flag ,zacct,".png",sep = ""), plot = plot  , width = 8, height = 4, dpi = 150)
+# picname = paste(flag ,zacct,".png",sep = "")
+# knitr::include_graphics(paste(adrr1,picname,sep = ""))
+plot<- ggplotly( plot )
+     plot
+```
+
+### 2.1当年累计分布情况-（渠道-产品-产品明细）
+
+```{r echo=FALSE , fig.height= 7, fig.width= 9,  message=FALSE, warning=FALSE}
+zsql <- paste("select  产品描述, 
+                          case when ( 渠道描述 = '' or  渠道描述 = '其他' or  渠道描述 like  '%冻结%') then '渠道描述其他' else 渠道描述 end as 渠道描述 ,
+              case when ([设计类型描述] = '' or  [设计类型描述] = '其他' or  [设计类型描述] like  '%冻结%' )then '设计类型其他' else [设计类型描述] end as 设计类型描述 ,
+              sum(本期余额)/1000000  as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and ( 一级科目 like '6531%' )
+              group  by  
+              产品描述 ,  
+              case when ( 渠道描述 = '' or  渠道描述 = '其他' or  渠道描述 like  '%冻结%') then '渠道描述其他' else 渠道描述 end   ,
+              case when ([设计类型描述] = '' or  [设计类型描述] = '其他' or  [设计类型描述] like  '%冻结%' )then '设计类型其他' else [设计类型描述] end
+              having  sum(本期余额) > 1000000")
+datasj <- dbGetQuery( con,zsql)
+
+datasj1 <- sqldf("select distinct 渠道描述 ,sum(本年新增)  from  datasj  group by  渠道描述 order by 渠道描述 ")
+datasj2 <- sqldf("select distinct 设计类型描述 ,sum(本年新增)  from  datasj  group by  设计类型描述 order by  sum(本年新增) desc ")
+datasj3 <- sqldf("select distinct 产品描述 ,sum(本年新增)  from  datasj  group by  产品描述 order by  sum(本年新增) desc ")
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( 
+  as.character(datasj1$"渠道描述"),  
+  as.character(datasj2$"设计类型描述"), 
+  as.character(datasj3$"产品描述")  ))  
+Nodes <- data.frame(name = all_nodes)  
+# 合并项目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf(" select  渠道描述 as Source  , 设计类型描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 渠道描述, 设计类型描述   
+                  union all 
+                  select  设计类型描述 as Source  , 产品描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 设计类型描述, 产品描述 ") 
+
+links3  <- links3 %>%  
+  arrange(Source,Target)  # 按照“渠道描述”升序排序  arrange(desc(渠道描述)) 
+Nodes$name <- c(as.character(Nodes$name))
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 10,  
+                      nodeWidth = 30,  
+                      units = "百万",
+                      iterations = 0)  
+# 展示桑基图  
+plot 
+
+```
+
+### （三）赔付支出-变动
+
+```{r echo=FALSE,   message=FALSE, warning=FALSE}
+zacct = 6511
+zacctname = '赔付支出'
+zsql <- paste("select 会计年度 ,会计期间, sum(本期余额)  as 本期余额   ,sum(期末余额) as 期末余额
+              from data6
+              where   substr(科目,1,4)*1   = ", zacct ," 
+              group by 会计年度 ,会计期间 ")
+data6z <- sqldf(zsql)
+# 使用ggplot2包绘制折线图  
+plot <- ggplot(data6z, aes(x = as.character(会计期间), y = 本期余额/100000000, group = 会计年度, colour = 会计年度)) +  
+  geom_line(size = 1) + # 设置线条粗细为1.5  
+  labs(title = "实线为每月变动；虚线为累计变动", x = "月份", y = "本期余额（亿元）") +   scale_color_manual(values = c("red", "blue", "green"))  
+
+sec.axis.coef <- 1  
+# 这个系数需要根据实际情况调整；假设两个变量的量纲相同，因此系数可以简单设为1
+
+# 使用sec.axis参数添加副y轴和相应的线  
+plot <- plot +  
+  geom_line(aes(y = 期末余额/100000000 * sec.axis.coef), # 乘以系数以匹配主y轴  
+            data = data6z, # 指定用于这条线的数据（如果需要，可以是data6z的一个子集）  
+            size = 1, linetype = "dashed") + # 设置线条粗细和类型  
+  scale_y_continuous(sec.axis = sec_axis(~ . / sec.axis.coef, name = "期末余额（亿元）")) # 添加副y轴，并设置其标签 
+
+dataout <- sqldf(paste("select 会计年度,会计期间, 本期余额 ,   期末余额   from data6z where 会计年度 = " ,zyear  ))
+dataout <- dataout %>%  
+    mutate(本期余额 = comma(本期余额),期末余额 = comma(期末余额)) #  
+print(dataout)
+plot<- ggplotly( plot )
+     plot
+# ggsave(paste(flag ,zacct,".png",sep = ""), plot = plot  , width = 8, height = 4, dpi = 150)
+# picname = paste(flag ,zacct,".png",sep = "")
+# knitr::include_graphics(paste(adrr1,picname,sep = ""))
+```
+
+### 3.1当年累计分布情况-（渠道-产品-产品明细-科目）
+
+```{r echo=FALSE , fig.height= 7, fig.width= 9,  message=FALSE, warning=FALSE}
+zsql <- paste("select  产品描述, 
+                          case when ( 渠道描述 = '' or  渠道描述 = '其他' or  渠道描述 like  '%冻结%') then '渠道描述其他' else 渠道描述 end as 渠道描述 ,
+              case when ([设计类型描述] = '' or  [设计类型描述] = '其他' or  [设计类型描述] like  '%冻结%' )then '设计类型其他' else [设计类型描述] end as 设计类型描述 ,科目描述,
+              sum(本期余额)/1000000  as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and ( 一级科目 like '6511%' )
+              group  by  
+              产品描述 ,  
+              case when ( 渠道描述 = '' or  渠道描述 = '其他' or  渠道描述 like  '%冻结%') then '渠道描述其他' else 渠道描述 end   ,
+              case when ([设计类型描述] = '' or  [设计类型描述] = '其他' or  [设计类型描述] like  '%冻结%' )then '设计类型其他' else [设计类型描述] end ,科目描述
+              having  sum(本期余额) > 1000000")
+datasj <- dbGetQuery( con,zsql)
+
+
+datasj2 <- sqldf("select distinct 设计类型描述 ,sum(本年新增)  from  datasj  group by  设计类型描述 order by  sum(本年新增) desc ")
+datasj3 <- sqldf("select distinct 产品描述 ,sum(本年新增)  from  datasj  group by  产品描述 order by  sum(本年新增) desc ")
+datasj4 <- sqldf("select distinct 科目描述 ,sum(本年新增)  from  datasj  group by  科目描述 order by  sum(本年新增) desc ")
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( 
+  as.character(datasj2$"设计类型描述"), 
+  as.character(datasj3$"产品描述") , 
+  as.character(datasj4$"科目描述")  ))  
+Nodes <- data.frame(name = all_nodes)  
+# 合并项目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf(" 
+                  select  设计类型描述 as Source  , 产品描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 设计类型描述, 产品描述
+                   union all 
+                  select  产品描述 as Source  , 科目描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 产品描述, 科目描述") 
+
+links3  <- links3 %>%  
+  arrange(Source,Target)  # 按照“渠道描述”升序排序  arrange(desc(渠道描述)) 
+Nodes$name <- c(as.character(Nodes$name))
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 10,  
+                      nodeWidth = 30,  
+                      units = "百万",
+                      iterations = 0)  
+# 展示桑基图  
+plot 
+```
+
+### （四）手续费及佣金支出-变动
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE}
+zacct = 6421
+zacctname = '手续费及佣金支出'
+zsql <- paste("select 会计年度 ,会计期间, sum(本期余额)  as 本期余额   ,sum(期末余额) as 期末余额
+              from data6
+              where   substr(科目,1,4)*1   = ", zacct ," 
+              group by 会计年度 ,会计期间 ")
+data6z <- sqldf(zsql)
+# 使用ggplot2包绘制折线图  
+plot <- ggplot(data6z, aes(x = as.character(会计期间), y = 本期余额/100000000, group = 会计年度, colour = 会计年度)) +  
+  geom_line(size = 1) + # 设置线条粗细为1.5  
+  labs(title = "实线为每月变动；虚线为累计变动", x = "月份", y = "本期余额（亿元）") +   scale_color_manual(values = c("red", "blue", "green"))  
+
+sec.axis.coef <- 1  
+# 这个系数需要根据实际情况调整；假设两个变量的量纲相同，因此系数可以简单设为1
+
+# 使用sec.axis参数添加副y轴和相应的线  
+plot <- plot +  
+  geom_line(aes(y = 期末余额/100000000 * sec.axis.coef), # 乘以系数以匹配主y轴  
+            data = data6z, # 指定用于这条线的数据（如果需要，可以是data6z的一个子集）  
+            size = 1, linetype = "dashed") + # 设置线条粗细和类型  
+  scale_y_continuous(sec.axis = sec_axis(~ . / sec.axis.coef, name = "期末余额（亿元）")) # 添加副y轴，并设置其标签 
+
+dataout <- sqldf(paste("select 会计年度,会计期间, 本期余额 ,   期末余额   from data6z where 会计年度 = " ,zyear  ))
+dataout <- dataout %>%  
+    mutate(本期余额 = comma(本期余额),期末余额 = comma(期末余额)) #  
+print(dataout)
+plot<- ggplotly( plot )
+     plot
+# ggsave(paste(flag ,zacct,".png",sep = ""), plot = plot  , width = 8, height = 4, dpi = 150)
+# picname = paste(flag ,zacct,".png",sep = "")
+# knitr::include_graphics(paste(adrr1,picname,sep = ""))
+```
+
+### 4.1当年累计分布情况-（渠道-产品-产品明细-科目）
+
+```{r echo=FALSE , fig.height= 7, fig.width= 9,  message=FALSE, warning=FALSE}
+zsql <- paste("select  产品描述, 
+                          case when ( 渠道描述 = '' or  渠道描述 = '其他' or  渠道描述 like  '%冻结%') then '渠道描述其他' else 渠道描述 end as 渠道描述 ,
+              case when ([设计类型描述] = '' or  [设计类型描述] = '其他' or  [设计类型描述] like  '%冻结%' )then '设计类型其他' else [设计类型描述] end as 设计类型描述 ,科目描述,
+              sum(本期余额)/1000000  as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and ( 一级科目 like '6421%' )
+              group  by  
+              产品描述 ,  
+              case when ( 渠道描述 = '' or  渠道描述 = '其他' or  渠道描述 like  '%冻结%') then '渠道描述其他' else 渠道描述 end   ,
+              case when ([设计类型描述] = '' or  [设计类型描述] = '其他' or  [设计类型描述] like  '%冻结%' )then '设计类型其他' else [设计类型描述] end ,科目描述
+              having  sum(本期余额) > 100000")
+datasj <- dbGetQuery( con,zsql)
+
+datasj1 <- sqldf("select distinct 渠道描述 ,sum(本年新增)  from  datasj  group by  渠道描述 order by 渠道描述 ")
+datasj3 <- sqldf("select distinct 产品描述 ,sum(本年新增)  from  datasj  group by  产品描述 order by  sum(本年新增) desc ")
+datasj4 <- sqldf("select distinct 科目描述 ,sum(本年新增)  from  datasj  group by  科目描述 order by  sum(本年新增) desc ")
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( 
+  as.character(datasj1$"渠道描述"),  
+  as.character(datasj3$"产品描述") , 
+  as.character(datasj4$"科目描述")  ))  
+Nodes <- data.frame(name = all_nodes)  
+# 合并项目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf(" select  渠道描述 as Source  , 产品描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 渠道描述, 产品描述   
+                union all 
+                  select  产品描述 as Source  , 科目描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 产品描述, 科目描述") 
+
+links3  <- links3 %>%  
+  arrange(Source,Target)  # 按照“渠道描述”升序排序  arrange(desc(渠道描述)) 
+Nodes$name <- c(as.character(Nodes$name))
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 10,  
+                      nodeWidth = 30,  
+                      units = "百万",
+                      iterations = 0)  
+# 展示桑基图  
+plot 
+
+```
+
+### （五）保单红利支出-变动
+
+```{r echo=FALSE,   message=FALSE, warning=FALSE}
+zacct = 6521
+zacctname = '保单红利支出'
+zsql <- paste("select 会计年度 ,会计期间, sum(本期余额)  as 本期余额   ,sum(期末余额) as 期末余额
+              from data6
+              where   substr(科目,1,4)*1   = ", zacct ," 
+              group by 会计年度 ,会计期间 ")
+data6z <- sqldf(zsql)
+# 使用ggplot2包绘制折线图  
+plot <- ggplot(data6z, aes(x = as.character(会计期间), y = 本期余额/100000000, group = 会计年度, colour = 会计年度)) +  
+  geom_line(size = 1) + # 设置线条粗细为1.5  
+  labs(title = "实线为每月变动；虚线为累计变动", x = "月份", y = "本期余额（亿元）") +   scale_color_manual(values = c("red", "blue", "green"))  
+
+sec.axis.coef <- 1  
+# 这个系数需要根据实际情况调整；假设两个变量的量纲相同，因此系数可以简单设为1
+
+# 使用sec.axis参数添加副y轴和相应的线  
+plot <- plot +  
+  geom_line(aes(y = 期末余额/100000000 * sec.axis.coef), # 乘以系数以匹配主y轴  
+            data = data6z, # 指定用于这条线的数据（如果需要，可以是data6z的一个子集）  
+            size = 1, linetype = "dashed") + # 设置线条粗细和类型  
+  scale_y_continuous(sec.axis = sec_axis(~ . / sec.axis.coef, name = "期末余额（亿元）")) # 添加副y轴，并设置其标签 
+
+dataout <- sqldf(paste("select 会计年度,会计期间, 本期余额 ,   期末余额   from data6z where 会计年度 = " ,zyear  ))
+dataout <- dataout %>%  
+    mutate(本期余额 = comma(本期余额),期末余额 = comma(期末余额)) #  
+print(dataout)
+plot<- ggplotly( plot )
+     plot
+# ggsave(paste(flag ,zacct,".png",sep = ""), plot = plot  , width = 8, height = 4, dpi = 150)
+# picname = paste(flag ,zacct,".png",sep = "")
+# knitr::include_graphics(paste(adrr1,picname,sep = ""))
+
+```
+
+### 5.1当年累计分布情况-（渠道-产品-产品明细）
+
+```{r echo=FALSE , fig.height= 7, fig.width= 9,   message=FALSE, warning=FALSE}
+zsql <- paste("select  产品描述, 
+                          case when ( 渠道描述 = '' or  渠道描述 = '其他' or  渠道描述 like  '%冻结%') then '渠道描述其他' else 渠道描述 end as 渠道描述 ,
+              case when ([设计类型描述] = '' or  [设计类型描述] = '其他' or  [设计类型描述] like  '%冻结%' )then '设计类型其他' else [设计类型描述] end as 设计类型描述 ,
+              sum(本期余额)/1000000  as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and ( 一级科目 like '6521%' )
+              group  by  
+              产品描述 ,  
+              case when ( 渠道描述 = '' or  渠道描述 = '其他' or  渠道描述 like  '%冻结%') then '渠道描述其他' else 渠道描述 end   ,
+              case when ([设计类型描述] = '' or  [设计类型描述] = '其他' or  [设计类型描述] like  '%冻结%' )then '设计类型其他' else [设计类型描述] end
+              having  sum(本期余额) > 100000")
+datasj <- dbGetQuery( con,zsql)
+
+datasj1 <- sqldf("select distinct 渠道描述 ,sum(本年新增)  from  datasj  group by  渠道描述 order by 渠道描述 ")
+datasj3 <- sqldf("select distinct 产品描述 ,sum(本年新增)  from  datasj  group by  产品描述 order by  sum(本年新增) desc ")
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( 
+  as.character(datasj1$"渠道描述"),  
+  as.character(datasj2$"设计类型描述"), 
+  as.character(datasj3$"产品描述")  ))  
+Nodes <- data.frame(name = all_nodes)  
+# 合并项目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf(" select  渠道描述 as Source  , 产品描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 渠道描述, 产品描述   
+  ") 
+
+links3  <- links3 %>%  
+  arrange(Source,Target)  # 按照“渠道描述”升序排序  arrange(desc(渠道描述)) 
+Nodes$name <- c(as.character(Nodes$name))
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 10,  
+                      nodeWidth = 30,  
+                      units = "百万",
+                      iterations = 0)  
+# 展示桑基图  
+plot 
+
+
+```
+
+### （六）其他业务成本-变动
+
+```{r echo=FALSE,   message=FALSE, warning=FALSE}
+zacct = 6402
+zacctname = '其他业务成本'
+zsql <- paste("select 会计年度 ,会计期间, sum(本期余额)  as 本期余额   ,sum(期末余额) as 期末余额
+              from data6
+              where   substr(科目,1,4)*1   = ", zacct ," 
+              group by 会计年度 ,会计期间 ")
+data6z <- sqldf(zsql)
+# 使用ggplot2包绘制折线图  
+plot <- ggplot(data6z, aes(x = as.character(会计期间), y = 本期余额/100000000, group = 会计年度, colour = 会计年度)) +  
+  geom_line(size = 1) + # 设置线条粗细为1.5  
+  labs(title = "实线为每月变动；虚线为累计变动", x = "月份", y = "本期余额（亿元）") +   scale_color_manual(values = c("red", "blue", "green"))  
+
+sec.axis.coef <- 1  
+# 这个系数需要根据实际情况调整；假设两个变量的量纲相同，因此系数可以简单设为1
+
+# 使用sec.axis参数添加副y轴和相应的线  
+plot <- plot +  
+  geom_line(aes(y = 期末余额/100000000 * sec.axis.coef), # 乘以系数以匹配主y轴  
+            data = data6z, # 指定用于这条线的数据（如果需要，可以是data6z的一个子集）  
+            size = 1, linetype = "dashed") + # 设置线条粗细和类型  
+  scale_y_continuous(sec.axis = sec_axis(~ . / sec.axis.coef, name = "期末余额（亿元）")) # 添加副y轴，并设置其标签 
+
+dataout <- sqldf(paste("select 会计年度,会计期间, 本期余额 ,   期末余额   from data6z where 会计年度 = " ,zyear  ))
+dataout <- dataout %>%  
+    mutate(本期余额 = comma(本期余额),期末余额 = comma(期末余额)) #  
+print(dataout)
+plot<- ggplotly( plot )
+     plot
+# ggsave(paste(flag ,zacct,".png",sep = ""), plot = plot  , width = 8, height = 4, dpi = 150)
+# picname = paste(flag ,zacct,".png",sep = "")
+# knitr::include_graphics(paste(adrr1,picname,sep = ""))
+```
+
+### 6.1当年累计分布情况-（渠道-产品明细-科目）
+
+```{r echo=FALSE , fig.height= 7, fig.width= 9, message=FALSE, warning=FALSE}
+zsql <- paste("select  case when ( 产品描述 = '' or  产品描述 = '其他' or  产品描述 like  '%冻结%' or 产品描述 is null) then '产品描述其他' else 产品描述 end as 产品描述 , 
+                          case when ( 渠道描述 = '' or  渠道描述 = '其他' or  渠道描述 like  '%冻结%' or 渠道描述 is null) then '渠道描述其他' else 渠道描述 end as 渠道描述 ,
+              case when ([设计类型描述] = '' or  [设计类型描述] = '其他' or  [设计类型描述] like  '%冻结%' or 设计类型描述 is null )then '设计类型其他' else [设计类型描述] end as 设计类型描述 ,
+              科目描述,
+              sum(本期余额)/1000000  as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and ( 一级科目 like '6402%' )
+              group  by  
+              case when ( 产品描述 = '' or  产品描述 = '其他' or  产品描述 like  '%冻结%' or 产品描述 is null) then '产品描述其他' else 产品描述 end   ,  
+              case when ( 渠道描述 = '' or  渠道描述 = '其他' or  渠道描述 like  '%冻结%' or 渠道描述 is null) then '渠道描述其他' else 渠道描述 end   ,
+               case when ([设计类型描述] = '' or  [设计类型描述] = '其他' or  [设计类型描述] like  '%冻结%' or 设计类型描述 is null )then '设计类型其他' else [设计类型描述] end ,科目描述
+              having  sum(本期余额) > 100000")
+datasj <- dbGetQuery( con,zsql)
+datasj1 <- sqldf("select distinct 渠道描述 ,sum(本年新增)  from  datasj  group by  渠道描述 order by 渠道描述 ")
+datasj2 <- sqldf("select distinct 设计类型描述 ,sum(本年新增)  from  datasj  group by  设计类型描述 order by  sum(本年新增) desc ")
+datasj3 <- sqldf("select distinct 产品描述 ,sum(本年新增)  from  datasj  group by  产品描述 order by  sum(本年新增) desc ")
+datasj4 <- sqldf("select distinct 科目描述 ,sum(本年新增)  from  datasj  group by  科目描述 order by  sum(本年新增) desc ")
+ 
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( 
+    as.character(datasj4$"科目描述"),  
+  as.character(datasj3$"产品描述") , 
+   as.character(datasj1$"渠道描述") ))  
+Nodes <- data.frame(name = all_nodes)  
+ 
+# 合并项目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf(" select  科目描述 as Source  , 产品描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 科目描述, 产品描述   
+                  union all 
+                  select  产品描述 as Source  , 渠道描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 产品描述, 渠道描述") 
+
+links3  <- links3 %>%  
+  arrange(Source,Target)  # 按照“渠道描述”升序排序  arrange(desc(渠道描述)) 
+Nodes$name <- c(as.character(Nodes$name))
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 10,  
+                      nodeWidth = 30,  
+                      units = "百万",
+                      iterations = 0)  
+# 展示桑基图  
+plot 
+
+```
+
+### （七）利息支出-变动
+
+```{r echo=FALSE,   message=FALSE, warning=FALSE}
+zacct = 6411
+zacctname = '利息支出'
+zsql <- paste("select 会计年度 ,会计期间, sum(本期余额)  as 本期余额   ,sum(期末余额) as 期末余额
+              from data6
+              where   substr(科目,1,4)*1   = ", zacct ," 
+              group by 会计年度 ,会计期间 ")
+data6z <- sqldf(zsql)
+# 使用ggplot2包绘制折线图  
+plot <- ggplot(data6z, aes(x = as.character(会计期间), y = 本期余额/100000000, group = 会计年度, colour = 会计年度)) +  
+  geom_line(size = 1) + # 设置线条粗细为1.5  
+  labs(title = "实线为每月变动；虚线为累计变动", x = "月份", y = "本期余额（亿元）") +   scale_color_manual(values = c("red", "blue", "green"))  
+
+sec.axis.coef <- 1  
+# 这个系数需要根据实际情况调整；假设两个变量的量纲相同，因此系数可以简单设为1
+
+# 使用sec.axis参数添加副y轴和相应的线  
+plot <- plot +  
+  geom_line(aes(y = 期末余额/100000000 * sec.axis.coef), # 乘以系数以匹配主y轴  
+            data = data6z, # 指定用于这条线的数据（如果需要，可以是data6z的一个子集）  
+            size = 1, linetype = "dashed") + # 设置线条粗细和类型  
+  scale_y_continuous(sec.axis = sec_axis(~ . / sec.axis.coef, name = "期末余额（亿元）")) # 添加副y轴，并设置其标签 
+
+dataout <- sqldf(paste("select 会计年度,会计期间, 本期余额 ,   期末余额   from data6z where 会计年度 = " ,zyear  ))
+dataout <- dataout %>%  
+    mutate(本期余额 = comma(本期余额),期末余额 = comma(期末余额)) #  
+print(dataout)
+plot<- ggplotly( plot )
+     plot
+# ggsave(paste(flag ,zacct,".png",sep = ""), plot = plot  , width = 8, height = 4, dpi = 150)
+# picname = paste(flag ,zacct,".png",sep = "")
+# knitr::include_graphics(paste(adrr1,picname,sep = ""))
+```
+
+### 7.1当年累计分布情况-（渠道-产品-产品明细-科目）
+
+```{r echo=FALSE , fig.height= 7, fig.width= 9,   message=FALSE, warning=FALSE}
+zsql <- paste("select  产品描述, 
+                          case when ( 渠道描述 = '' or  渠道描述 = '其他' or  渠道描述 like  '%冻结%') then '渠道描述其他' else 渠道描述 end as 渠道描述 ,
+              case when ([设计类型描述] = '' or  [设计类型描述] = '其他' or  [设计类型描述] like  '%冻结%' )then '设计类型其他' else [设计类型描述] end as 设计类型描述 ,科目描述,
+              sum(本期余额)/1000000  as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and ( 一级科目 like '6411%' )
+              group  by  
+              产品描述 ,  
+              case when ( 渠道描述 = '' or  渠道描述 = '其他' or  渠道描述 like  '%冻结%') then '渠道描述其他' else 渠道描述 end   ,
+              case when ([设计类型描述] = '' or  [设计类型描述] = '其他' or  [设计类型描述] like  '%冻结%' )then '设计类型其他' else [设计类型描述] end ,科目描述
+              having  sum(本期余额) > 100000")
+datasj <- dbGetQuery( con,zsql)
+
+datasj1 <- sqldf("select distinct 渠道描述 ,sum(本年新增)  from  datasj  group by  渠道描述 order by 渠道描述 ")
+datasj3 <- sqldf("select distinct 产品描述 ,sum(本年新增)  from  datasj  group by  产品描述 order by  sum(本年新增) desc ")
+datasj4 <- sqldf("select distinct 科目描述 ,sum(本年新增)  from  datasj  group by  科目描述 order by  sum(本年新增) desc ")
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( 
+  as.character(datasj4$"科目描述") ,  
+  as.character(datasj3$"产品描述") , 
+  as.character(datasj1$"渠道描述")  ))  
+Nodes <- data.frame(name = all_nodes)  
+# 合并项目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf(" select  科目描述 as Source  , 产品描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 科目描述, 产品描述   
+                  union all 
+                  select  产品描述 as Source  , 渠道描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 产品描述, 渠道描述") 
+
+links3  <- links3 %>%  
+  arrange(Source,Target)  # 按照“渠道描述”升序排序  arrange(desc(渠道描述)) 
+Nodes$name <- c(as.character(Nodes$name))
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 10,  
+                      nodeWidth = 30,  
+                      units = "百万",
+                      iterations = 0)  
+# 展示桑基图  
+plot 
+
+```
+
+### （八）提取准备金-变动
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+zaccta = 6501
+zacctb = 6504
+zacct = zaccta
+zacctname = '提取准备金'
+zsql <- paste("select 会计年度 ,会计期间, sum(本期余额)  as 本期余额   ,sum(期末余额) as 期末余额
+              from data6
+              where   substr(科目,1,4)*1  between ", zaccta ," and ", zacctb ,"
+              group by 会计年度 ,会计期间 ")
+data6z <- sqldf(zsql)
+# 使用ggplot2包绘制折线图  
+plot <- ggplot(data6z, aes(x = as.character(会计期间), y = 本期余额/100000000, group = 会计年度, colour = 会计年度)) +  
+  geom_line(size = 1) + # 设置线条粗细为1.5  
+  labs(title = "实线为每月变动；虚线为累计变动", x = "月份", y = "本期余额（亿元）") +   scale_color_manual(values = c("red", "blue", "green"))  
+
+sec.axis.coef <- 1  
+# 这个系数需要根据实际情况调整；假设两个变量的量纲相同，因此系数可以简单设为1
+
+# 使用sec.axis参数添加副y轴和相应的线  
+plot <- plot +  
+  geom_line(aes(y = 期末余额/100000000 * sec.axis.coef), # 乘以系数以匹配主y轴  
+            data = data6z, # 指定用于这条线的数据（如果需要，可以是data6z的一个子集）  
+            size = 1, linetype = "dashed") + # 设置线条粗细和类型  
+  scale_y_continuous(sec.axis = sec_axis(~ . / sec.axis.coef, name = "期末余额（亿元）")) # 添加副y轴，并设置其标签 
+
+dataout <- sqldf(paste("select 会计年度,会计期间,   本期余额 ,   期末余额   from data6z where 会计年度 = " ,zyear  ))
+dataout <- dataout %>%  
+    mutate(本期余额 = comma(本期余额),期末余额 = comma(期末余额)) #  
+print(dataout)
+plot<- ggplotly( plot )
+     plot
+# ggsave(paste(flag ,zacct,".png",sep = ""), plot = plot  , width = 8, height = 4, dpi = 150)
+# picname = paste(flag ,zacct,".png",sep = "")
+# knitr::include_graphics(paste(adrr1,picname,sep = ""))
+```
+
+### 8.1当年累计分布情况-（渠道-产品-产品明细-科目）
+
+```{r echo=FALSE , fig.height= 7 , fig.width= 9,  message=FALSE, warning=FALSE}
+zsql <- paste("select  保险责任描述, 
+                          case when ( 渠道描述 = '' or  渠道描述 = '其他' or  渠道描述 like  '%冻结%') then '渠道描述其他' else 渠道描述 end as 渠道描述 ,
+              case when ([设计类型描述] = '' or  [设计类型描述] = '其他' or  [设计类型描述] like  '%冻结%' )then '设计类型其他' else [设计类型描述] end as 设计类型描述 ,科目描述,
+              sum(本期余额)/1000000  as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and ( 一级科目 like '6501%' or 一级科目 like '6502%' or 一级科目 like '6503%' or 一级科目 like '6504%'  )
+              group  by  
+              保险责任描述 ,  
+              case when ( 渠道描述 = '' or  渠道描述 = '其他' or  渠道描述 like  '%冻结%') then '渠道描述其他' else 渠道描述 end   ,
+              case when ([设计类型描述] = '' or  [设计类型描述] = '其他' or  [设计类型描述] like  '%冻结%' )then '设计类型其他' else [设计类型描述] end ,科目描述
+              having  sum(本期余额) > 100000")
+datasj <- dbGetQuery( con,zsql)
+
+datasj1 <- sqldf("select distinct 渠道描述 ,sum(本年新增)  from  datasj  group by  渠道描述 order by 渠道描述 ")
+datasj2 <- sqldf("select distinct 设计类型描述 ,sum(本年新增)  from  datasj  group by  设计类型描述 order by  sum(本年新增) desc ")
+datasj3 <- sqldf("select distinct 保险责任描述 ,sum(本年新增)  from  datasj  group by  保险责任描述 order by  sum(本年新增) desc ")
+datasj4 <- sqldf("select distinct 科目描述 ,sum(本年新增)  from  datasj  group by  科目描述 order by  sum(本年新增) desc ")
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( 
+  as.character(datasj1$"渠道描述"),  
+  as.character(datasj2$"设计类型描述"), 
+  as.character(datasj3$"保险责任描述") , 
+  as.character(datasj4$"科目描述")  ))  
+Nodes <- data.frame(name = all_nodes)  
+# 合并项目到保险责任描述的链接与保险责任描述到渠道描述的链接  
+links3 <- sqldf(" select  渠道描述 as Source  , 设计类型描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 渠道描述, 设计类型描述   
+                  union all 
+                  select  设计类型描述 as Source  , 保险责任描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 设计类型描述, 保险责任描述
+                   union all 
+                  select  保险责任描述 as Source  , 科目描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 保险责任描述, 科目描述") 
+
+links3  <- links3 %>%  
+  arrange(Source,Target)  # 按照“渠道描述”升序排序  arrange(desc(渠道描述)) 
+Nodes$name <- c(as.character(Nodes$name))
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 10,  
+                      nodeWidth = 30,  
+                      units = "百万",
+                      iterations = 0)  
+# 展示桑基图  
+plot 
+
+
+
+```
+
+# 五、利润表项目-营业外、税金、准备金类
+
+### （一）营业外收入-变动
+
+```{r echo=FALSE,   message=FALSE, warning=FALSE}
+zacct = 6301
+zacctname = '营业外收入'
+zsql <- paste("select 会计年度 ,会计期间, sum(本期余额)  as 本期余额   ,sum(期末余额) as 期末余额
+              from data6
+              where   substr(科目,1,4)*1   = ", zacct ," 
+              group by 会计年度 ,会计期间 ")
+data6z <- sqldf(zsql)
+# 使用ggplot2包绘制折线图  
+plot <- ggplot(data6z, aes(x = as.character(会计期间), y = -本期余额/100000000, group = 会计年度, colour = 会计年度)) +  
+  geom_line(size = 1) + # 设置线条粗细为1.5  
+  labs(title = "实线为每月变动；虚线为累计变动", x = "月份", y = "本期余额（亿元）") +   scale_color_manual(values = c("red", "blue", "green"))  
+
+sec.axis.coef <- 1  
+# 这个系数需要根据实际情况调整；假设两个变量的量纲相同，因此系数可以简单设为1
+
+# 使用sec.axis参数添加副y轴和相应的线  
+plot <- plot +  
+  geom_line(aes(y = -期末余额 * sec.axis.coef), # 乘以系数以匹配主y轴  
+            data = data6z, # 指定用于这条线的数据（如果需要，可以是data6z的一个子集）  
+            size = 1, linetype = "dashed") + # 设置线条粗细和类型  
+  scale_y_continuous(sec.axis = sec_axis(~ . / sec.axis.coef, name = "期末余额（元）")) # 添加副y轴，并设置其标签 
+
+dataout <- sqldf(paste("select 会计年度,会计期间,-本期余额 as 本期余额 , - 期末余额  AS 期末余额  from data6z where 会计年度 = " ,zyear  ))
+dataout <- dataout %>%  
+    mutate(本期余额 = comma(本期余额),期末余额 = comma(期末余额)) #  
+print(dataout)
+plot<- ggplotly( plot )
+     plot
+# ggsave(paste(flag ,zacct,".png",sep = ""), plot = plot  , width = 8, height = 4, dpi = 150)
+# picname = paste(flag ,zacct,".png",sep = "")
+# knitr::include_graphics(paste(adrr1,picname,sep = ""))
+```
+
+#### 1.1当年累计分布情况-（月份-科目）
+
+```{r echo=FALSE , fig.height= 7, fig.width= 9,  message=FALSE, warning=FALSE}
+
+zsql <- paste("select  会计期间, 
+              科目描述  ,
+                - sum(本期余额)  as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and 一级科目 like '6301%'
+              group  by  
+              会计期间 ,
+              科目描述 
+                 ")
+datasj <- dbGetQuery( con,zsql)  
+
+datasj1 <- sqldf("select distinct 会计期间 ,sum(本年新增)  from  datasj  group by  会计期间 order by  sum(本年新增) desc ")
+datasj2 <- sqldf("select distinct 科目描述 ,sum(本年新增)  from  datasj  group by  科目描述 order by  sum(本年新增) desc ")
+ 
+
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( as.character(datasj1$"会计期间"),  
+                       as.character(datasj2$"科目描述")  ))  
+Nodes <- data.frame(name = all_nodes)  
+# 合并项目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf(" 
+                 select  会计期间 as Source  , 科目描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 会计期间, 科目描述 
+                  ") 
+Nodes$name <- c(as.character(Nodes$name))
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 10,  
+                      nodeWidth = 30,  
+                      units = "元")  
+# 展示桑基图  
+plot 
+
+
+```
+
+### （二）营业外支出-变动
+
+```{r echo=FALSE,   message=FALSE, warning=FALSE}
+zacct = 6711
+zacctname = '营业外支出'
+zsql <- paste("select 会计年度 ,会计期间, sum(本期余额)  as 本期余额   ,sum(期末余额) as 期末余额
+              from data6
+              where   substr(科目,1,4)*1   = ", zacct ," 
+              group by 会计年度 ,会计期间 ")
+data6z <- sqldf(zsql)
+# 使用ggplot2包绘制折线图  
+plot <- ggplot(data6z, aes(x = as.character(会计期间), y = 本期余额/100000000, group = 会计年度, colour = 会计年度)) +  
+  geom_line(size = 1) + # 设置线条粗细为1.5  
+  labs(title = "实线为每月变动；虚线为累计变动", x = "月份", y = "本期余额（亿元）") +   scale_color_manual(values = c("red", "blue", "green"))  
+
+sec.axis.coef <- 1  
+# 这个系数需要根据实际情况调整；假设两个变量的量纲相同，因此系数可以简单设为1
+
+# 使用sec.axis参数添加副y轴和相应的线  
+plot <- plot +  
+  geom_line(aes(y = 期末余额 * sec.axis.coef), # 乘以系数以匹配主y轴  
+            data = data6z, # 指定用于这条线的数据（如果需要，可以是data6z的一个子集）  
+            size = 1, linetype = "dashed") + # 设置线条粗细和类型  
+  scale_y_continuous(sec.axis = sec_axis(~ . / sec.axis.coef, name = "期末余额（元）")) # 添加副y轴，并设置其标签 
+
+dataout <- sqldf(paste("select 会计年度,会计期间, 本期余额 ,   期末余额   from data6z where 会计年度 = " ,zyear  ))
+dataout <- dataout %>%  
+    mutate(本期余额 = comma(本期余额),期末余额 = comma(期末余额)) #  
+print(dataout)
+plot<- ggplotly( plot )
+     plot
+# ggsave(paste(flag ,zacct,".png",sep = ""), plot = plot  , width = 8, height = 4, dpi = 150)
+# picname = paste(flag ,zacct,".png",sep = "")
+# knitr::include_graphics(paste(adrr1,picname,sep = ""))
+```
+
+#### 2.1当年累计分布情况-（月份-科目）
+
+```{r echo=FALSE , fig.height= 7, fig.width= 9,   message=FALSE, warning=FALSE}
+
+zsql <- paste("select  会计期间, 
+              科目描述  ,
+                 sum(本期余额)  as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and 一级科目 like '6711%'
+              group  by  
+              会计期间 ,
+              科目描述 
+                 ")
+datasj <- dbGetQuery( con,zsql)  
+
+datasj1 <- sqldf("select distinct 会计期间 ,sum(本年新增)  from  datasj  group by  会计期间 order by  sum(本年新增) desc ")
+datasj2 <- sqldf("select distinct 科目描述 ,sum(本年新增)  from  datasj  group by  科目描述 order by  sum(本年新增) desc ")
+ 
+
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( as.character(datasj1$"会计期间"),  
+                       as.character(datasj2$"科目描述")  ))  
+Nodes <- data.frame(name = all_nodes)  
+# 合并项目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf(" 
+                 select  会计期间 as Source  , 科目描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 会计期间, 科目描述 
+                  ") 
+Nodes$name <- c(as.character(Nodes$name))
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 10,  
+                      nodeWidth = 30,  
+                      units = "元")  
+# 展示桑基图  
+plot 
+
+
+```
+
+### （三）税金及附加-变动
+
+```{r 税金及附加-变动, echo=FALSE,   message=FALSE, warning=FALSE}
+zacct = 6405
+zacctname = '税金及附加'
+zsql <- paste("select 会计年度 ,会计期间, sum(本期余额)  as 本期余额   ,sum(期末余额) as 期末余额
+              from data6
+              where   substr(科目,1,4)*1   = ", zacct ," 
+              group by 会计年度 ,会计期间 ")
+data6z <- sqldf(zsql)
+# 使用ggplot2包绘制折线图  
+plot <- ggplot(data6z, aes(x = as.character(会计期间), y = 本期余额/100000000, group = 会计年度, colour = 会计年度)) +  
+  geom_line(size = 1) + # 设置线条粗细为1.5  
+  labs(title = "实线为每月变动；虚线为累计变动", x = "月份", y = "本期余额（亿元）") +   scale_color_manual(values = c("red", "blue", "green"))  
+
+sec.axis.coef <- 1  
+# 这个系数需要根据实际情况调整；假设两个变量的量纲相同，因此系数可以简单设为1
+
+# 使用sec.axis参数添加副y轴和相应的线  
+plot <- plot +  
+  geom_line(aes(y = 期末余额 * sec.axis.coef), # 乘以系数以匹配主y轴  
+            data = data6z, # 指定用于这条线的数据（如果需要，可以是data6z的一个子集）  
+            size = 1, linetype = "dashed") + # 设置线条粗细和类型  
+  scale_y_continuous(sec.axis = sec_axis(~ . / sec.axis.coef, name = "期末余额（元）")) # 添加副y轴，并设置其标签 
+
+dataout <- sqldf(paste("select 会计年度,会计期间, 本期余额 ,   期末余额   from data6z where 会计年度 = " ,zyear  ))
+dataout <- dataout %>%  
+    mutate(本期余额 = comma(本期余额),期末余额 = comma(期末余额)) #  
+print(dataout)
+plot<- ggplotly( plot )
+     plot
+# ggsave(paste(flag ,zacct,".png",sep = ""), plot = plot  , width = 8, height = 4, dpi = 150)
+# picname = paste(flag ,zacct,".png",sep = "")
+# knitr::include_graphics(paste(adrr1,picname,sep = ""))
+```
+
+# 六、利润表项目-再保类
+
+### （一）分出保费-变动
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE}
+zacct = 6541
+zacctname = '分出保费'
+zsql <- paste("select 会计年度 ,会计期间, sum(本期余额)  as 本期余额   ,sum(期末余额) as 期末余额
+              from data6
+              where   substr(科目,1,4)*1   = ", zacct ," 
+              group by 会计年度 ,会计期间 ")
+data6z <- sqldf(zsql)
+# 使用ggplot2包绘制折线图  
+plot <- ggplot(data6z, aes(x = as.character(会计期间), y = 本期余额/100000000, group = 会计年度, colour = 会计年度)) +  
+  geom_line(size = 1) + # 设置线条粗细为1.5  
+  labs(title = "实线为每月变动；虚线为累计变动", x = "月份", y = "本期余额（亿元）") +   scale_color_manual(values = c("red", "blue", "green"))  
+
+sec.axis.coef <- 1  
+# 这个系数需要根据实际情况调整；假设两个变量的量纲相同，因此系数可以简单设为1
+
+# 使用sec.axis参数添加副y轴和相应的线  
+plot <- plot +  
+  geom_line(aes(y = 期末余额/100000000 * sec.axis.coef), # 乘以系数以匹配主y轴  
+            data = data6z, # 指定用于这条线的数据（如果需要，可以是data6z的一个子集）  
+            size = 1, linetype = "dashed") + # 设置线条粗细和类型  
+  scale_y_continuous(sec.axis = sec_axis(~ . / sec.axis.coef, name = "期末余额（亿元）")) # 添加副y轴，并设置其标签 
+
+dataout <- sqldf(paste("select 会计年度,会计期间, 本期余额 ,   期末余额   from data6z where 会计年度 = " ,zyear  ))
+dataout <- dataout %>%  
+    mutate(本期余额 = comma(本期余额),期末余额 = comma(期末余额)) #  
+print(dataout)
+plot<- ggplotly( plot )
+     plot
+# ggsave(paste(flag ,zacct,".png",sep = ""), plot = plot  , width = 8, height = 4, dpi = 150)
+# picname = paste(flag ,zacct,".png",sep = "")
+# knitr::include_graphics(paste(adrr1,picname,sep = ""))
+```
+
+### 1.1当年累计分布情况-（渠道-产品明细-科目）
+
+```{r echo=FALSE , fig.height= 15, fig.width= 9,   message=FALSE, warning=FALSE}
+zsql <- paste("select  产品描述, 
+                          case when ( 渠道描述 = '' or  渠道描述 = '其他' or  渠道描述 like  '%冻结%') then '渠道描述其他' else 渠道描述 end as 渠道描述 ,
+              case when ([设计类型描述] = '' or  [设计类型描述] = '其他' or  [设计类型描述] like  '%冻结%' )then '设计类型其他' else [设计类型描述] end as 设计类型描述 ,科目描述,
+                sum(本期余额)/1000000  as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and ( 一级科目 like '6541%' )
+              group  by  
+              产品描述 ,  
+              case when ( 渠道描述 = '' or  渠道描述 = '其他' or  渠道描述 like  '%冻结%') then '渠道描述其他' else 渠道描述 end   ,
+              case when ([设计类型描述] = '' or  [设计类型描述] = '其他' or  [设计类型描述] like  '%冻结%' )then '设计类型其他' else [设计类型描述] end ,科目描述 having  sum(本期余额) > 10000 "
+   )
+datasj <- dbGetQuery( con,zsql)
+
+datasj1 <- sqldf("select distinct 渠道描述 ,sum(本年新增)  from  datasj  group by  渠道描述 order by 渠道描述 ")
+datasj3 <- sqldf("select distinct 产品描述 ,sum(本年新增)  from  datasj  group by  产品描述 order by  sum(本年新增) desc ")
+datasj4 <- sqldf("select distinct 科目描述 ,sum(本年新增)  from  datasj  group by  科目描述 order by  sum(本年新增) desc ")
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( 
+  as.character(datasj1$"渠道描述"),  
+  as.character(datasj3$"产品描述") , 
+  as.character(datasj4$"科目描述")  ))  
+Nodes <- data.frame(name = all_nodes)  
+# 合并项目到产品描述的链接与产品描述到渠道描述的链接产品描述
+links3 <- sqldf(" select  渠道描述 as Source  , 产品描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 渠道描述, 产品描述   
+                  union all 
+                  select  产品描述 as Source  , 科目描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 产品描述, 科目描述
+                      having sum(本年新增) > 0
+                ") 
+
+links3  <- links3 %>%  
+  arrange(Source,Target)  # 按照“渠道描述”升序排序  arrange(desc(渠道描述)) 
+Nodes$name <- c(as.character(Nodes$name))
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 10,  
+                      nodeWidth = 30,  
+                      units = "元",
+                      iterations = 0)  
+# 展示桑基图  
+plot 
+
+
+
+```
+
+### （二）摊回赔付-变动
+
+```{r echo=FALSE,   message=FALSE, warning=FALSE}
+zacct = 6205
+zacctname = '摊回赔付支出'
+zsql <- paste("select 会计年度 ,会计期间, sum(本期余额)  as 本期余额   ,sum(期末余额) as 期末余额
+              from data6
+              where   substr(科目,1,4)*1   = ", zacct ," 
+              group by 会计年度 ,会计期间 ")
+data6z <- sqldf(zsql)
+# 使用ggplot2包绘制折线图  
+plot <- ggplot(data6z, aes(x = as.character(会计期间), y = -本期余额/100000000, group = 会计年度, colour = 会计年度)) +  
+  geom_line(size = 1) + # 设置线条粗细为1.5  
+  labs(title = "实线为每月变动；虚线为累计变动", x = "月份", y = "本期余额（亿元）") +   scale_color_manual(values = c("red", "blue", "green"))  
+
+sec.axis.coef <- 1  
+# 这个系数需要根据实际情况调整；假设两个变量的量纲相同，因此系数可以简单设为1
+
+# 使用sec.axis参数添加副y轴和相应的线  
+plot <- plot +  
+  geom_line(aes(y = -期末余额/100000000 * sec.axis.coef), # 乘以系数以匹配主y轴  
+            data = data6z, # 指定用于这条线的数据（如果需要，可以是data6z的一个子集）  
+            size = 1, linetype = "dashed") + # 设置线条粗细和类型  
+  scale_y_continuous(sec.axis = sec_axis(~ . / sec.axis.coef, name = "期末余额（亿元）")) # 添加副y轴，并设置其标签 
+
+dataout <- sqldf(paste("select 会计年度,会计期间,- 本期余额 as 本期余额 , - 期末余额  AS 期末余额  from data6z where 会计年度 = " ,zyear  ))
+dataout <- dataout %>%  
+    mutate(本期余额 = comma(本期余额),期末余额 = comma(期末余额)) #  
+print(dataout)
+plot<- ggplotly( plot )
+     plot
+# ggsave(paste(flag ,zacct,".png",sep = ""), plot = plot  , width = 8, height = 4, dpi = 150)
+# picname = paste(flag ,zacct,".png",sep = "")
+# knitr::include_graphics(paste(adrr1,picname,sep = ""))
+```
+
+### 2.1当年累计分布情况-（渠道-产品-产品明细-科目）
+
+```{r echo=FALSE , fig.height= 7, fig.width= 9,  message=FALSE, warning=FALSE}
+zsql <- paste("select  产品描述, 
+                          case when ( 渠道描述 = '' or  渠道描述 = '其他' or  渠道描述 like  '%冻结%') then '渠道描述其他' else 渠道描述 end as 渠道描述 ,
+              case when ([设计类型描述] = '' or  [设计类型描述] = '其他' or  [设计类型描述] like  '%冻结%' )then '设计类型其他' else [设计类型描述] end as 设计类型描述 ,科目描述,
+              - sum(本期余额)/1000000  as 本年新增  
+              from [DJSX].[dbo].[balance_test]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and ( 一级科目 like '6205%' )
+              group  by  
+              产品描述 ,  
+              case when ( 渠道描述 = '' or  渠道描述 = '其他' or  渠道描述 like  '%冻结%') then '渠道描述其他' else 渠道描述 end   ,
+              case when ([设计类型描述] = '' or  [设计类型描述] = '其他' or  [设计类型描述] like  '%冻结%' )then '设计类型其他' else [设计类型描述] end ,科目描述  ")
+datasj <- dbGetQuery( con,zsql)
+
+datasj1 <- sqldf("select distinct 渠道描述 ,sum(本年新增)  from  datasj  group by  渠道描述 order by 渠道描述 ")
+datasj2 <- sqldf("select distinct 设计类型描述 ,sum(本年新增)  from  datasj  group by  设计类型描述 order by  sum(本年新增) desc ")
+datasj3 <- sqldf("select distinct 产品描述 ,sum(本年新增)  from  datasj  group by  产品描述 order by  sum(本年新增) desc ")
+datasj4 <- sqldf("select distinct 科目描述 ,sum(本年新增)  from  datasj  group by  科目描述 order by  sum(本年新增) desc ")
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( 
+  as.character(datasj1$"渠道描述"),  
+  as.character(datasj2$"设计类型描述"), 
+  as.character(datasj3$"产品描述") , 
+  as.character(datasj4$"科目描述")  ))  
+Nodes <- data.frame(name = all_nodes)  
+# 合并项目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf(" select  渠道描述 as Source  , 设计类型描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 渠道描述, 设计类型描述   
+                  union all 
+                  select  设计类型描述 as Source  , 产品描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 设计类型描述, 产品描述
+                   union all 
+                  select  产品描述 as Source  , 科目描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 产品描述, 科目描述") 
+
+links3  <- links3 %>%  
+  arrange(Source,Target)  # 按照“渠道描述”升序排序  arrange(desc(渠道描述)) 
+Nodes$name <- c(as.character(Nodes$name))
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",  
+                      fontSize = 10,  
+                      nodeWidth = 30,  
+                      units = "百万",
+                      iterations = 0)  
+# 展示桑基图  
+plot 
+ 
+```
+
+### （三）摊回准备金-变动
+
+```{r echo=FALSE,   message=FALSE, warning=FALSE}
+zaccta = 6201
+zacctb = 6204
+zacct = zaccta
+zacctname = '摊回准备金'
+zsql <- paste("select 会计年度 ,会计期间, sum(本期余额)  as 本期余额   ,sum(期末余额) as 期末余额
+              from data6
+              where   substr(科目,1,4)*1  between ", zaccta ," and ", zacctb ,"
+              group by 会计年度 ,会计期间 ")
+data6z <- sqldf(zsql)
+# 使用ggplot2包绘制折线图  
+plot <- ggplot(data6z, aes(x = as.character(会计期间), y = -本期余额/100000000, group = 会计年度, colour = 会计年度)) +  
+  geom_line(size = 1) + # 设置线条粗细为1.5  
+  labs(title = "实线为每月变动；虚线为累计变动", x = "月份", y = "本期余额（亿元）") +   scale_color_manual(values = c("red", "blue", "green"))  
+
+sec.axis.coef <- 1  
+# 这个系数需要根据实际情况调整；假设两个变量的量纲相同，因此系数可以简单设为1
+
+# 使用sec.axis参数添加副y轴和相应的线  
+plot <- plot +  
+  geom_line(aes(y = -期末余额/100000000 * sec.axis.coef), # 乘以系数以匹配主y轴  
+            data = data6z, # 指定用于这条线的数据（如果需要，可以是data6z的一个子集）  
+            size = 1, linetype = "dashed") + # 设置线条粗细和类型  
+  scale_y_continuous(sec.axis = sec_axis(~ . / sec.axis.coef, name = "期末余额（亿元）")) # 添加副y轴，并设置其标签 
+
+dataout <- sqldf(paste("select 会计年度,会计期间,- 本期余额 as 本期余额 , - 期末余额  AS 期末余额  from data6z where 会计年度 = " ,zyear  ))
+dataout <- dataout %>%  
+    mutate(本期余额 = comma(本期余额),期末余额 = comma(期末余额)) #  
+print(dataout)
+plot<- ggplotly( plot )
+     plot
+# ggsave(paste(flag ,zacct,".png",sep = ""), plot = plot  , width = 8, height = 4, dpi = 150)
+# picname = paste(flag ,zacct,".png",sep = "")
+# knitr::include_graphics(paste(adrr1,picname,sep = ""))
+```
+
+```{r echo=FALSE, results='asis'}
+cat('
+<div id="top-button" style="display: none; position: fixed; bottom: 20px; right: 30px; z-index: 99; border: none; outline: none; background-color: red; color: white; cursor: pointer; padding: 15px; border-radius: 4px; font-size: 18px;" onclick="topFunction()">Top</div>
+
+<script>
+// When the user scrolls down 20px from the top of the document, show the button
+window.onscroll = function() {scrollFunction()};
+
+function scrollFunction() {
+  if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+    document.getElementById("top-button").style.display = "block";
+  } else {
+    document.getElementById("top-button").style.display = "none";
+  }
+}
+
+// When the user clicks on the button, scroll to the top of the document
+function topFunction() {
+  document.body.scrollTop = 0; // For Safari
+  document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
+}
+</script>
+')
+
+```

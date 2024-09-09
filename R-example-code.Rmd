@@ -1,0 +1,1379 @@
+---
+##需注意层级（通过空格位数体现）
+title: "xxxx保费收入分析（含万能）"
+subtitle: "                     "
+##author: "作者姓名"
+##date: "`r Sys.Date()`"
+output:
+  # xaringan::moon_reader:
+  #   css: [default, lucy, metropolis-fonts]
+  html_document:
+    fig_width: 12
+    fig_height: 6
+    toc: true
+    number_sections: false
+    theme: readable
+    toc_depth: 2
+always_allow_html: true
+### number_sections: true
+### theme: united
+### highlight: tango
+#toc_float:         collapsed: true       smooth_scroll: false
+---
+
+<br>
+
+<!-- 定义参数 -->
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE, results='asis'}
+##定义生成报表的月份##暂不支持13和14期间的数据
+
+zyear = 2024
+zmonth = 8
+cat(paste("数据分析期间：" ,zyear, "年", zmonth, "月"))
+#定义数据抽取的限制YYYYMM# zyearmonth = 202312
+##资产负债瀑布图截断
+zstar = 6500
+zend  = 8600
+##图片路径
+adrr1 = 'D:/R/'
+##报表标题cat(paste("大家人寿主要财务数据报告(截至", zyear, "年", zmonth, "月)",sep = ""))  
+```
+
+注：图表无特别标注和说明，数据为本年累计；2022年和2023年的对比为同期累计数据。
+
+<br>
+
+<!-- library包 -->
+
+```{r   echo = FALSE ,  message = FALSE , warning = FALSE }
+#library
+#install_phantomjs()
+library(devtools)
+library(ggplot2)  
+library(DBI)  # 连接到SQL Server数据库  
+library(waterfalls)
+library(ggsignif)
+library(gghalves)
+library(ggalluvial)
+library(sqldf)
+library(ggthemes)
+library(gsubfn)
+library(proto)
+library(RSQLite)
+library(patchwork)
+library(knitr)  
+library(kableExtra)
+library(treemapify)
+library(tweenr)
+library(gganimate)
+library(RColorBrewer)
+library(tidyverse)
+library(writexl)  
+library(treemap)
+library(igraph)
+library(ggsankey)
+library(ggrepel)##添加箱型图异常值标签
+library(dplyr)  
+library(scales)
+library(magrittr) 
+library(htmltools)
+library(remap)#导入REmap包
+#devtools::install_github("badbye/baidumap")
+#library(baidumap)#导入baidumap包
+library(stringr)  
+#桑基图
+library(dplyr)  
+library(networkD3)  
+library(htmlwidgets)
+library(DT) 
+library(RSelenium) 
+library(ggplot2)
+library(plotly)
+library(htmlwidgets)
+library(gridExtra)
+ library(DT)
+##生成图表的前缀日期
+flag =  paste(zyear,zmonth,as.numeric(now()),sep = "")
+# print(flag)
+```
+
+<!-- con -->
+
+```{r   echo = FALSE ,  message = FALSE , warning = FALSE}
+  con <- dbConnect(odbc::odbc(), driver = "SQL Server", server = "10.10.9.57,1433",   
+                   database = "DJSX", uid = "admin", pwd = "admin")  
+```
+
+# 一、旧准则保费收入（含续期）-分析
+
+<br>
+
+```{r   echo = FALSE  ,   message = FALSE, warning = FALSE}
+zsql <- paste("declare @zyear varchar(4)  ;  set @zyear  = 2024;
+declare @zmonth varchar(2)  ;  set @zmonth = 07;
+with temp as(
+select   会计年度, CASE 
+              WHEN 科目描述 LIKE '%续期%' then '续期'
+              WHEN 科目描述 LIKE '%期交%' then '新单期交'
+              WHEN 科目描述 LIKE '%趸交%' then '新单趸交'      
+              WHEN 科目描述 LIKE '%合同收入' then '新单趸交'  
+              WHEN 科目描述 LIKE '%本金' then '新单趸交'  
+              else 'other' end as   类型 , 
+                - sum(本期余额)/100000000 as 金额  
+              from [DJSX].[dbo].[balance]
+              where 会计年度 between  " , zyear  , " - 2 and  " , zyear  , "  and 会计期间 <=  " ,zmonth , " 
+              and  ( [科目] like '271110%'  or [科目] like  '2721010100'   or  [科目]  like '6031%'   ) 
+			  and  not  ( [科目]  like '6031%' and  ( [产品描述]  like '%万能%' or   [产品描述]  like '%投资连结%' ))  
+              group  by  会计年度,  CASE 
+              WHEN 科目描述 LIKE '%续期%' then '续期'
+              WHEN 科目描述 LIKE '%期交%' then '新单期交'
+              WHEN 科目描述 LIKE '%趸交%' then '新单趸交'      
+              WHEN 科目描述 LIKE '%合同收入' then '新单趸交'  
+              WHEN 科目描述 LIKE '%本金' then '新单趸交'  
+              else 'other' end
+union all 
+select   会计年度, '总规模保费' ,
+                - sum(本期余额)/100000000 as 金额  
+              from [DJSX].[dbo].[balance]
+              where 会计年度 between  " , zyear  , " - 2 and  " , zyear  , "  and 会计期间 <=  " ,zmonth , "
+              and  ( [科目] like '271110%'  or [科目] like  '2721010100'   or  [科目]  like '6031%'   ) 
+			  and  not  ( [科目]  like '6031%' and  ( [产品描述]  like '%万能%' or   [产品描述]  like '%投资连结%' ))  
+              group  by  会计年度 
+)
+ 
+--select * from temp 
+
+--select  会计年度  ,总规模保费  , 新单期交 , 新单趸交, 续期 
+--from temp
+--PIVOT  ( sum(金额) for  类型 in ( 总规模保费 , 新单期交 , 新单趸交, 续期 )  ) as aa
+
+
+select  类型  , round([2024],2) as [2024年] ,   format( CASE 
+        WHEN [2023] = 0 THEN NULL  -- 避免除以零
+        ELSE ([2024] / [2023]) - 1 
+    END ,'P')AS 同比增长率,   
+    round([2023],2) as [2023年], format( CASE 
+        WHEN [2022] = 0 THEN NULL  -- 避免除以零
+        ELSE ([2023] / [2022]) - 1 
+    END ,'P')AS 同比增长率 ,
+	  round([2022],2) as [2022年]  
+from temp
+PIVOT  ( sum(金额) for  会计年度 in (  [2024] ,   [2023] ,   [2022] )  ) as aa
+order by 类型")
+
+dataor <- dbGetQuery( con,zsql)  
+
+ # dataor %>% 
+ #    kbl() %>%
+ #    kable_minimal(position = "right")
+
+dataor %>%
+  kbl() %>%
+  kable_classic_2(  full_width = F , position = "left")  %>%  #
+  add_header_above(c("（单位：亿元）" = 1, "2024年" = 2, "2023年" = 2, "2022年" = 1))
+    # kbl(caption = ""  ,border_box_size = 1 , format  = "html") %>%
+    # kable_classic (full_width = F, html_font = "Cambria" , font_size = 16 , position = "left" )
+
+```
+
+ 
+
+## 1.旧准则保费收入-分年缴费情况
+
+（单位：亿元）
+
+(1)整体保费情况
+```{r   echo = FALSE  ,   message = FALSE, warning = FALSE}
+
+zsql <- paste("select   会计年度,  
+                - sum(本期余额)/100000000 as 金额  
+              from [DJSX].[dbo].[balance]
+              where 会计年度 <= " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and  ( [科目] like '271110%'  or [科目] like  '2721010100'   or  [科目]  like '6031%'   ) and  not  ( [科目]  like '6031%' and  ( [产品描述]  like '%万能%' or   [产品描述]  like '%投资连结%' ))  
+              group  by  会计年度 
+              ")
+
+# 获取数据
+data122 <- dbGetQuery( con,zsql)  
+p122 <- ggplot(data122, aes(x = 会计年度, y = 金额    )) +  
+  geom_bar(stat = "identity", width = 0.6, fill = "#1F78B4") +  
+  scale_fill_brewer(palette = "Paired") +   
+  # facet_grid( cols = vars(设计类型描述),rows = vars(科目描述)) +
+  # theme(axis.text.y = element_text(angle = 50)) +
+  labs(x = "", y = "", title = "") +
+  theme_minimal()  +  # 添加一个主题以美化图表   
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 1),  # X轴标签倾斜50度
+    panel.grid.major = element_line(color = "grey80"),  # 主网格线
+    panel.grid.minor = element_blank(),                 # 次网格线
+    panel.spacing = unit(1, "lines")                    # 增加面板之间的间距
+  ) +
+    geom_text(aes(label =  ifelse(round(金额,2) != 0, round(金额,2), "") ), position = position_stack(vjust = 0.5), size = 4, color = "white")  # 在柱子上添加文本标签
+ 
+# 将ggplot对象转换为plotly对象
+p122 <- ggplotly(p122)
+p122
+
+```
+
+(2)分首续期类型
+```{r   echo = FALSE  ,   message = FALSE, warning = FALSE}
+ 
+#####分首续期类型
+
+zsql <- paste("select   会计年度, CASE 
+              WHEN 科目描述 LIKE '%续期%' then '续期'
+              WHEN 科目描述 LIKE '%期交%' then '新单期交'
+              WHEN 科目描述 LIKE '%趸交%' then '新单趸交'      
+              WHEN 科目描述 LIKE '%合同收入' then '新单趸交'  
+              WHEN 科目描述 LIKE '%本金' then '新单趸交'  
+              else 'other' end as    [科目描述], 
+                - sum(本期余额)/100000000 as 金额  
+              from [DJSX].[dbo].[balance]
+              where 会计年度 <= " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and  ( [科目] like '271110%'  or [科目] like  '2721010100'   or  [科目]  like '6031%'   ) and  not  ( [科目]  like '6031%' and  ( [产品描述]  like '%万能%' or   [产品描述]  like '%投资连结%' ))  
+              group  by  会计年度,  CASE 
+              WHEN 科目描述 LIKE '%续期%' then '续期'
+              WHEN 科目描述 LIKE '%期交%' then '新单期交'
+              WHEN 科目描述 LIKE '%趸交%' then '新单趸交'      
+              WHEN 科目描述 LIKE '%合同收入' then '新单趸交'  
+              WHEN 科目描述 LIKE '%本金' then '新单趸交'  
+              else 'other' end  
+              ")
+
+# 获取数据
+data122 <- dbGetQuery( con,zsql)  
+p122 <- ggplot(data122, aes(x = 会计年度, y = 金额, fill = 科目描述)) +  
+  geom_bar(stat = "identity", width = 0.6) +  
+  scale_fill_brewer(palette = "Paired") +   
+  facet_grid( rows = vars(科目描述)) +  # cols = vars(设计类型描述),
+  # theme(axis.text.y = element_text(angle = 50)) +
+  labs(x = "", y = "", title = "") +
+  theme_minimal()  +  # 添加一个主题以美化图表   
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 1),  # X轴标签倾斜50度
+    panel.grid.major = element_line(color = "grey80"),  # 主网格线
+    panel.grid.minor = element_blank(),                 # 次网格线
+    panel.spacing = unit(1, "lines")                    # 增加面板之间的间距
+  ) +
+    geom_text(aes(label =  ifelse(round(金额,2) != 0, round(金额,2), "") ), position = position_stack(vjust = 0.5), size = 4, color = "white")  # 在柱子上添加文本标签
+ 
+# 将ggplot对象转换为plotly对象
+p122 <- ggplotly(p122)
+p122
+# library(DTExtra)
+ cat( "数据查看下载") 
+# 使用datatable函数创建交互式表格  
+datatable(data122,   
+          extensions = 'Buttons', # 加载按钮扩展
+          options = list(  
+          pageLength = 4, # 每页显示的行数  
+          dom = 'Bfrtip', # 显示按钮，包括导出  
+          buttons = c( 'csv', 'excel', 'pdf', 'print'), #'copy',
+          lengthMenu = list(c(19, 100), c('19', '100')) ,  # 分页选项
+          initComplete = JS(
+            "function(settings, json) {",
+            "$('table.dataTable').css({'font-size': '12px'});",  # 调整表格字体大小
+            "}")
+          )    
+          )
+```
+
+
+
+
+## 2.旧准则保费收入-（分年/分新单续期）缴费占比情况
+
+（单位：亿元）
+
+```{r   echo = FALSE  ,   message = FALSE, warning = FALSE}
+zsql <- paste("select   会计年度,
+              CASE 
+              WHEN 科目描述 LIKE '%续期%' then '续期'
+              WHEN 科目描述 LIKE '%期交%' then '新单期交'
+              WHEN 科目描述 LIKE '%趸交%' then '新单趸交'      
+              WHEN 科目描述 LIKE '%合同收入' then '新单趸交'  
+              WHEN 科目描述 LIKE '%本金' then '新单趸交'  
+              else 'other' end as    [科目描述],
+                - ROUND(sum(本期余额)/100000000,2) as 金额  
+              from [DJSX].[dbo].[balance]
+              where 会计年度 <= " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and  ( [科目] like '271110%'  or [科目] like  '2721010100'   or  [科目]  like '6031%'   ) and  not  ( [科目]  like '6031%' and  ( [产品描述]  like '%万能%' or   [产品描述]  like '%投资连结%' ))  
+              group  by  会计年度,
+              [科目描述]
+          having sum(本期余额) <=  -1000000
+              ")
+
+# 获取数据
+data122 <- dbGetQuery( con,zsql) 
+
+data122 <- sqldf("select * from data122 
+                  order by 会计年度,
+                  case 
+                  when  科目描述= '新单趸交' then  1
+                  when  科目描述= '新单期缴' then  2
+                  when  科目描述= '续期' then  3
+                  end 
+                 ")
+# 创建单独的饼图
+plots <- list()
+for (year in unique(data122$会计年度)) {
+    subset_data <- data122 %>% filter(会计年度 == year  )
+    p <- plot_ly(subset_data, labels = ~科目描述, values = ~金额, type = 'pie', textinfo = 'label+percent+value' ,sort = FALSE  )   %>%  layout(showlegend = FALSE , title = paste( year) ,   margin = list(t = 30) ,  yanchor = 'top' )    # 增加顶部边距    
+    plots[[paste(year)]] <- p
+  } 
+ 
+  # plots
+zstyle = paste("display: grid; grid-template-columns: repeat(" ,3 , ", 1fr); grid-gap: 8px;")
+ combined_plot <- tagList(
+   tags$div(
+     style = zstyle ,
+     lapply(plots, function(plot) {
+       tags$div(style = "border: #ccc; padding: 3px;height: 400px;width: 280px; bottom: 5px;overflow: visible; justify-content: buttom;", plot)
+     })
+   )
+ )
+ combined_plot
+
+
+# library(DTExtra)
+ cat( "数据查看下载") 
+# 使用datatable函数创建交互式表格  
+datatable(data122,   
+          extensions = 'Buttons', # 加载按钮扩展
+          options = list(  
+          pageLength = 4, # 每页显示的行数  
+          dom = 'Bfrtip', # 显示按钮，包括导出  
+          buttons = c( 'csv', 'excel', 'pdf', 'print'), #'copy',
+          lengthMenu = list(c(19, 100), c('19', '100')) ,  # 分页选项
+          initComplete = JS(
+            "function(settings, json) {",
+            "$('table.dataTable').css({'font-size': '12px'});",  # 调整表格字体大小
+            "}")
+          )    
+          )
+```
+
+
+## 3.旧准则保费收入-（分年/分新单续期/分设计类型）缴费情况
+
+（单位：亿元）
+
+```{r   echo = FALSE  ,   message = FALSE, warning = FALSE}
+zsql <- paste("select   会计年度,
+ 
+              [设计类型描述], 
+              CASE 
+              WHEN 科目描述 LIKE '%续期%' then '续期'
+              WHEN 科目描述 LIKE '%期交%' then '新单期交'
+              WHEN 科目描述 LIKE '%趸交%' then '新单趸交'      
+              WHEN 科目描述 LIKE '%合同收入' then '新单趸交'  
+              WHEN 科目描述 LIKE '%本金' then '新单趸交'  
+              else 'other' end as    [科目描述],
+                - sum(本期余额)/100000000 as 金额  
+              from [DJSX].[dbo].[balance]
+              where 会计年度 <= " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and  ( [科目] like '271110%'  or [科目] like  '2721010100'   or  [科目]  like '6031%'   ) and  not  ( [科目]  like '6031%' and  ( [产品描述]  like '%万能%' or   [产品描述]  like '%投资连结%' ))  
+              group  by  会计年度,
+ 
+              [设计类型描述], 
+              [科目描述]
+          having sum(本期余额) <=  -1000000
+              ")
+
+# 获取数据
+data122 <- dbGetQuery( con,zsql) 
+
+data122$设计类型描述 <- factor(data122$设计类型描述, levels = c("普通保险", "分红保险", "万能保险", "投资连结保险"))
+  
+p122 <- ggplot(data122, aes(x = 会计年度, y = 金额, fill = 科目描述)) +  
+  geom_bar(stat = "identity", width = 0.6) +  
+  scale_fill_brewer(palette = "Paired") +   
+  facet_grid( cols = vars(设计类型描述),rows = vars(科目描述)) +
+  # theme(axis.text.y = element_text(angle = 50)) +
+  labs(x = "", y = "", title = "", color = "交费方式") +
+  theme_minimal()  +  # 添加一个主题以美化图表   
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 1),  # X轴标签倾斜50度
+    panel.grid.major = element_line(color = "grey80"),  # 主网格线
+    panel.grid.minor = element_blank(),                 # 次网格线
+    panel.spacing = unit(1, "lines")                    # 增加面板之间的间距
+  ) +
+    geom_text(aes(label =  ifelse(round(金额,2) != 0, round(金额,2), "") ), position = position_stack(vjust = 0.5), size = 3, color = "black")  # 在柱子上添加文本标签
+# 将ggplot对象转换为plotly对象
+p122 <- ggplotly(p122)
+p122
+# library(DTExtra)
+ cat( "数据查看下载") 
+# 使用datatable函数创建交互式表格  
+datatable(data122,   
+          extensions = 'Buttons', # 加载按钮扩展
+          options = list(  
+          pageLength = 4, # 每页显示的行数  
+          dom = 'Bfrtip', # 显示按钮，包括导出  
+          buttons = c( 'csv', 'excel', 'pdf', 'print'), #'copy',
+          lengthMenu = list(c(19, 100), c('19', '100')) ,  # 分页选项
+          initComplete = JS(
+            "function(settings, json) {",
+            "$('table.dataTable').css({'font-size': '12px'});",  # 调整表格字体大小
+            "}")
+          )    
+          )
+
+```
+
+<br>
+
+# 二、旧准则新单保费收入-分析
+
+## 1.旧准则新单保费收入-（分年/分投资类型/分缴费年期）缴费占比情况
+
+（单位:亿元）(忽略合计保费小于100万的分类缴费期限）
+
+```{r   echo = FALSE  ,   message = FALSE, warning = FALSE}
+  zsqlo <- paste("select 会计年度 ,[缴费年期描述], - round(sum(本期余额)/100000000,2) as 金额 ,
+               [设计类型描述]
+              from [DJSX].[dbo].[balance]
+              where 会计年度 <= " , zyear  ,  "and 会计期间 <= " ,zmonth , "
+              and   ( [科目] like '2711100000%'  or   [科目] like '27111010%'  or [科目] like  '2721010100'   or  [科目]  like '603101%'   ) and  not  ( [科目]  like '603101%' and  ( [产品描述]  like '%万能%' or   [产品描述]  like '%投资连结%' ))  
+              and [产品描述] not like '%投资连结%'
+              and 会计年度 >= 2024
+              group  by 会计年度 , 缴费年期描述, 设计类型描述
+              having  abs(sum(本期余额)) > 1000000
+              order by 设计类型描述 , 会计年度 
+              ")
+  data122 <- dbGetQuery( con,zsqlo)   
+  # print(data122)
+  # print(data)
+data122$设计类型描述 <- factor(data122$设计类型描述, levels = c("普通保险", "分红保险", "万能保险", "投资连结保险"))
+data122 <- sqldf("select * from  data122 
+                  order by 
+                  case when 设计类型描述 = '普通保险' then 1 
+                       when 设计类型描述 = '分红保险' then 2
+                       when 设计类型描述 = '万能保险' then 3 
+                       when 设计类型描述 = '投资连结保险' then 4 end  ")
+# 创建单独的饼图
+plots <- list()
+for (year in unique(data122$会计年度)) {
+  for (cpdl in unique(data122$设计类型描述)) {
+    subset_data <- data122 %>% filter(会计年度 == year, 设计类型描述 == cpdl )
+    p <- plot_ly(subset_data, labels = ~缴费年期描述, values = ~金额, type = 'pie', textinfo = 'label+percent+value')  %>%  layout(showlegend = FALSE , title = paste( cpdl ) ,  margin = list(t = 50)  )    # 增加顶部边距    
+    plots[[paste(year, cpdl)]] <- p
+  } 
+}
+  # plots
+zstyle = paste("display: grid; grid-template-columns: repeat(" ,3 , ", 1fr); grid-gap: 8px;")
+ combined_plot <- tagList(
+   tags$div(
+     style = zstyle ,
+     lapply(plots, function(plot) {
+       tags$div(style = "border: #ccc; padding: 3px;height: 500px;width: 200px; bottom: 10px;overflow: visible; justify-content: buttom;", plot)
+     })
+   )
+ )
+ combined_plot
+
+
+# library(DTExtra)
+ cat( "数据查看下载") 
+# 使用datatable函数创建交互式表格  
+datatable(data122,   
+          extensions = 'Buttons', # 加载按钮扩展
+          options = list(  
+          pageLength = 4, # 每页显示的行数  
+          dom = 'Bfrtip', # 显示按钮，包括导出  
+          buttons = c( 'csv', 'excel', 'pdf', 'print'), #'copy',
+          lengthMenu = list(c(19, 100), c('19', '100')) ,  # 分页选项
+          initComplete = JS(
+            "function(settings, json) {",
+            "$('table.dataTable').css({'font-size': '12px'});",  # 调整表格字体大小
+            "}")
+          )    
+          )
+```
+
+## 2.旧准则新单保费收入-（分年/分月/分渠道）缴费情况
+
+（单位：亿元）
+
+```{r   echo = FALSE  ,   message = FALSE, warning = FALSE}
+ 
+  zsqlo <- paste("select 会计年度 , 会计期间 , - sum(本期余额)/100000000 as 金额 ,
+              case 
+              when 渠道  = '101001' then '个人代理'
+              when 渠道  like  '102%' then '公司直销'
+              when 渠道  like  '103%' then '银邮代理'
+              when 渠道  = '104001' then '专业代理'
+              when 渠道  = '104002' then '保险经纪'
+              when 渠道  = '104003' then '电话销售'
+              when 渠道  = '104004' then '网上销售'
+              else 渠道 end as 销售渠道 
+              from [DJSX].[dbo].[balance]
+              where 会计年度 <= " , zyear  ,  "and 会计期间 <= " ,zmonth , "
+              and   ( [科目] like '2711100000%'  or   [科目] like '27111010%'  or [科目] like  '2721010100'   or  [科目]  like '603101%'   ) and  not  ( [科目]  like '603101%' and  ( [产品描述]  like '%万能%' or   [产品描述]  like '%投资连结%' ))  
+              group  by 会计年度 , 会计期间, case 
+              when 渠道  = '101001' then '个人代理'
+              when 渠道  like  '102%' then '公司直销'
+              when 渠道  like  '103%' then '银邮代理'
+              when 渠道  = '104001' then '专业代理'
+              when 渠道  = '104002' then '保险经纪'
+              when 渠道  = '104003' then '电话销售'
+              when 渠道  = '104004' then '网上销售'
+              else 渠道 end
+              order by 会计期间 ")
+  data122 <- dbGetQuery( con,zsqlo)   
+  # print(data122)
+  # print(data)
+ 
+  p122 <- ggplot(data122,  aes(x = as.character(会计期间), y = 金额,fill = 销售渠道 )) +  
+    geom_bar(stat = "identity" , width = 0.6 ,position = "stack") +  
+    # geom_line() +
+    # geom_smooth() +
+    # geom_col(fill="orange") +
+    scale_fill_brewer(palette = "Paired")  +
+    facet_grid(rows  = vars(会计年度)  ) +
+    # scale_y_continuous(limits = c(0, 500), breaks = seq(0, 500, by = 50)) +
+    labs(x = "会计期间",  y = "金额（单位:亿元）" , title = "" )   +
+    theme_minimal() +  # 添加一个主题以美化图表
+    theme(
+    axis.text.x = element_text(angle = 0, hjust = 1),  # X轴标签倾斜50度
+    # panel.grid.major = element_line(color = "grey80"),  # 主网格线
+    # panel.grid.minor = element_blank(),                 # 次网格线
+    panel.spacing = unit(1, "lines")   ) +
+    geom_text(aes(label =  ifelse(round(金额,2) != 0, round(金额,2), "") ),             position = position_stack(vjust = 0.5), 
+            size = 3, 
+            color = "black")  # 在柱子上添加文本标签
+ 
+     p122 <- ggplotly( p122 )
+     p122   
+ # library(DTExtra)
+ cat( "数据查看下载") 
+# 使用datatable函数创建交互式表格  
+datatable(data122,   
+          extensions = 'Buttons', # 加载按钮扩展
+          options = list(  
+          pageLength = 4, # 每页显示的行数  
+          dom = 'Bfrtip', # 显示按钮，包括导出  
+          buttons = c( 'csv', 'excel', 'pdf', 'print'), #'copy',
+          lengthMenu = list(c(19, 100), c('19', '100')) ,  # 分页选项
+          initComplete = JS(
+            "function(settings, json) {",
+            "$('table.dataTable').css({'font-size': '12px'});",  # 调整表格字体大小
+            "}")
+          )    
+          )
+```
+
+## 3.旧准则新单保费收入-（分年/分投资类型/分期趸缴）缴费情况
+
+（单位:亿元）
+
+```{r   echo = FALSE  ,   message = FALSE, warning = FALSE}
+  zsqlo <- paste("select 会计年度 ,
+              case 
+              when [科目描述] like '%期交%' or  [科目描述] like '%首年续期%'  then '期缴'
+              else '趸交'
+              end as 缴费方式
+              ,  - sum(本期余额)/100000000 as 金额 ,
+               [设计类型描述]
+              from [DJSX].[dbo].[balance]
+              where 会计年度 <= " , zyear  ,  "and 会计期间 <= " ,zmonth , "
+              -----旧准则新单科目
+              and    ( [科目] like '2711100000%'  or   [科目] like '27111010%'  or [科目] like  '2721010100'   or  [科目]  like '603101%'   ) and  not  ( [科目]  like '603101%' and  ( [产品描述]  like '%万能%' or   [产品描述]  like '%投资连结%' ))  
+              group  by 会计年度 ,case 
+              when [科目描述] like '%期交%' or  [科目描述] like '%首年续期%'  then '期缴'
+              else '趸交'
+              end,  设计类型描述
+              having  sum(本期余额) <> 0
+              order by 会计年度 
+              ")
+  data122 <- dbGetQuery( con,zsqlo)   
+  # print(data122)
+  # print(data)
+
+data122$设计类型描述 <- factor(data122$设计类型描述, levels = c("普通保险", "分红保险", "万能保险", "投资连结保险"))
+  
+p122 <- ggplot(data122, aes(x = 会计年度, y = 金额, fill = 缴费方式)) +  
+  geom_bar(stat = "identity", width = 0.6) +  
+  scale_fill_brewer(palette = "Paired") +   
+  facet_grid( cols = vars(设计类型描述)) +
+  labs(x = "", y = "", title = "") +
+  theme_minimal()  +  # 添加一个主题以美化图表   
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 1),  # X轴标签倾斜50度
+    panel.grid.major = element_line(color = "grey80"),  # 主网格线
+    panel.grid.minor = element_blank(),                 # 次网格线
+    panel.spacing = unit(1, "lines")                    # 增加面板之间的间距
+  ) +
+    geom_text(aes(label =  ifelse(round(金额,2) != 0, round(金额,2), "") ),             position = position_stack(vjust = 0.5), 
+            size = 3, 
+            color = "black")  # 在柱子上添加文本标签
+# 将ggplot对象转换为plotly对象
+p122 <- ggplotly(p122)
+p122
+# library(DTExtra)
+ cat( "数据查看下载") 
+# 使用datatable函数创建交互式表格  
+datatable(data122,   
+          extensions = 'Buttons', # 加载按钮扩展
+          options = list(  
+          pageLength = 4, # 每页显示的行数  
+          dom = 'Bfrtip', # 显示按钮，包括导出  
+          buttons = c( 'csv', 'excel', 'pdf', 'print'), #'copy',
+          lengthMenu = list(c(19, 100), c('19', '100')) ,  # 分页选项
+          initComplete = JS(
+            "function(settings, json) {",
+            "$('table.dataTable').css({'font-size': '12px'});",  # 调整表格字体大小
+            "}")
+          )    
+          )
+```
+
+## 4.旧准则新单保费收入-（分年/分月/分投资类型）缴费情况
+
+（单位:亿元）
+
+```{r   echo = FALSE  ,   message = FALSE, warning = FALSE}
+  zsqlo <- paste("select 会计年度 , 会计期间 , - sum(本期余额)/100000000 as 金额 ,
+               [设计类型描述]
+              from [DJSX].[dbo].[balance]
+              where 会计年度 <= " , zyear  ,  "and 会计期间 <= " ,zmonth , "
+              and    ( [科目] like '2711100000%'  or   [科目] like '27111010%'  or [科目] like  '2721010100'   or  [科目]  like '603101%'   ) and  not  ( [科目]  like '603101%' and  ( [产品描述]  like '%万能%' or   [产品描述]  like '%投资连结%' ))  
+              group  by 会计年度 , 会计期间, 设计类型描述
+              having  sum(本期余额) <> 0
+              order by 会计年度,会计期间 
+              ")
+  data122 <- dbGetQuery( con,zsqlo)   
+  # print(data122)
+  # print(data)
+
+data122$设计类型描述 <- factor(data122$设计类型描述, levels = c("普通保险", "分红保险", "万能保险", "投资连结保险"))
+  
+p122 <- ggplot(data122, aes(x = 设计类型描述, y = 金额, fill = 设计类型描述)) +  
+  geom_bar(stat = "identity", width = 0.6) +  
+  scale_fill_brewer(palette = "Paired") +   
+  facet_grid(rows = vars(会计年度), cols = vars(会计期间)) +
+  labs(x = "", y = "", title = "行：会计年度 ；列：会计月份") +
+  theme_minimal()  +  # 添加一个主题以美化图表   
+  theme(
+    axis.text.x = element_text(angle = 50, hjust = 1),  # X轴标签倾斜50度
+    panel.grid.major = element_line(color = "grey80"),  # 主网格线
+    panel.grid.minor = element_blank(),                 # 次网格线
+    panel.spacing = unit(1, "lines")                    # 增加面板之间的间距
+  ) +
+    geom_text(aes(label =  ifelse(round(金额,2) != 0, round(金额,2), "") ),             position = position_stack(vjust = 0.5), 
+            size = 3, 
+            color = "black")  # 在柱子上添加文本标签
+# 将ggplot对象转换为plotly对象
+p122 <- ggplotly(p122)
+p122
+# library(DTExtra)
+ cat( "数据查看下载") 
+# 使用datatable函数创建交互式表格  
+datatable(data122,   
+          extensions = 'Buttons', # 加载按钮扩展
+          options = list(  
+          pageLength = 4, # 每页显示的行数  
+          dom = 'Bfrtip', # 显示按钮，包括导出  
+          buttons = c( 'csv', 'excel', 'pdf', 'print'), #'copy',
+          lengthMenu = list(c(19, 100), c('19', '100')) ,  # 分页选项
+          initComplete = JS(
+            "function(settings, json) {",
+            "$('table.dataTable').css({'font-size': '12px'});",  # 调整表格字体大小
+            "}")
+          )    
+          )
+
+```
+
+## 5.旧准则新单保费收入-（分年/分月/分投资类型）缴费比例情况
+
+（单位：亿元）
+
+```{r   echo = FALSE  ,   message = FALSE, warning = FALSE}
+# 创建单独的饼图
+
+data122 <- sqldf("select * from data122 order by 会计年度,会计期间,设计类型描述 ")
+# 定义固定的颜色向量
+color_palette <- c("普通保险" = "#1f77b4", "分红保险" = "#ff7f0e", "万能保险" = "#2ca02c", "投资连结保险" = "#d62728")
+plots <- list()
+for (year in unique(data122$会计年度)) {
+  for (period in unique(data122$会计期间)) {
+    subset_data <- data122 %>% filter(会计年度 == year, 会计期间 == period)
+    p <- plot_ly(subset_data, 
+                 labels = ~设计类型描述, 
+                 values = ~round(金额,2), 
+                 type = 'pie', 
+                 sort = FALSE,  # 不按顺序大小排序
+                 textinfo = 'label+percent+value',
+                 marker = list(colors = color_palette[subset_data$设计类型描述])
+                 )  %>% layout(
+                        showlegend = FALSE, 
+                        title = paste(year , period) , 
+                        margin = list(t = 100 , b = 100, l = 50 ) ,
+                        font= list(size = 9 ))
+
+    plots[[paste(year, period)]] <- p
+  }
+}
+
+
+zstyle = paste("display: grid; grid-template-columns: repeat(" ,zmonth , ", 1fr); grid-gap: 10px;")
+combined_plot <- tagList(
+  tags$div(
+    style = zstyle ,
+    lapply(plots, function(plot) {
+      tags$div(style = "border: #ccc; padding: 2px;height: 280px;width: 190px;", plot)
+    })
+  )
+)
+combined_plot
+
+
+# library(DTExtra)
+ cat( "数据查看下载") 
+# 使用datatable函数创建交互式表格  
+datatable(data122,   
+          extensions = 'Buttons', # 加载按钮扩展
+          options = list(  
+          pageLength = 4, # 每页显示的行数  
+          dom = 'Bfrtip', # 显示按钮，包括导出  
+          buttons = c( 'csv', 'excel', 'pdf', 'print'), #'copy',
+          lengthMenu = list(c(19, 100), c('19', '100')) ,  # 分页选项
+          initComplete = JS(
+            "function(settings, json) {",
+            "$('table.dataTable').css({'font-size': '12px'});",  # 调整表格字体大小
+            "}")
+          )    
+          )
+```
+
+## 6.旧准则新单保费收入-（分年/分投资类型/分缴费年期）缴费情况
+
+（单位:亿元）
+
+（忽略合计保费小于100万的分类缴费期限）
+
+```{r   echo = FALSE  ,   message = FALSE, warning = FALSE}
+  zsqlo <- paste("select 会计年度 , 缴费年期描述 , - sum(本期余额)/100000000 as 金额 ,
+               [设计类型描述]
+              from [DJSX].[dbo].[balance]
+              where 会计年度 <= " , zyear  ,  "and 会计期间 <= " ,zmonth , "
+              and   ( [科目] like '2711100000%'  or   [科目] like '27111010%'  or [科目] like  '2721010100'   or  [科目]  like '603101%'   ) and  not  ( [科目]  like '603101%' and  ( [产品描述]  like '%万能%' or   [产品描述]  like '%投资连结%' ))  
+              and 会计年度 >= 2024
+              group  by 会计年度 , 缴费年期描述, 设计类型描述
+              having  abs(sum(本期余额)) > 1000000
+              order by 会计年度,缴费年期描述 
+              ")
+  data122 <- dbGetQuery( con,zsqlo)   
+  # print(data122)
+  # print(data)
+
+data122$设计类型描述 <- factor(data122$设计类型描述, levels = c("普通保险", "分红保险", "万能保险", "投资连结保险"))
+data122$缴费年期描述 <- factor(data122$缴费年期描述, levels = c("99年期",	"98年期",	"97年期",	"96年期",	"95年期",	"94年期",	"93年期",	"92年期",	"91年期",	"90年期",	"89年期",	"88年期",	"87年期",	"86年期",	"85年期",	"84年期",	"83年期",	"82年期",	"81年期",	"80年期",	"79年期",	"78年期",	"77年期",	"76年期",	"75年期",	"74年期",	"73年期",	"72年期",	"71年期",	"70年期",	"69年期",	"68年期",	"67年期",	"66年期",	"65年期",	"64年期",	"63年期",	"62年期",	"61年期",	"60年期",	"59年期",	"58年期",	"57年期",	"56年期",	"55年期",	"54年期",	"53年期",	"52年期",	"51年期",	"50年期",	"49年期",	"48年期",	"47年期",	"46年期",	"45年期",	"44年期",	"43年期",	"42年期",	"41年期",	"40年期",	"39年期",	"38年期",	"37年期",	"36年期",	"35年期",	"34年期",	"33年期",	"32年期",	"31年期",	"30年期",	"29年期",	"28年期",	"27年期",	"26年期",	"25年期",	"24年期",	"23年期",	"22年期",	"21年期",	"20年期",	"19年期",	"18年期",	"17年期",	"16年期",	"15年期",	"14年期",	"13年期",	"12年期",	"11年期",	"10年期",	"9年期",	"8年期",	"7年期",	"6年期",	"5年期",	"4年期",	"3年期",	"2年期",	"1年期",	"趸交"))
+
+p122 <- ggplot(data122, aes(x = 设计类型描述, y = 金额, fill = 缴费年期描述)) +  
+  geom_bar(stat = "identity", width = 0.6,length = 20 ) +  
+  scale_fill_brewer(palette = "Paired") +   
+  facet_grid(rows = vars(缴费年期描述), cols = vars(会计年度)) +
+  labs(x = "", y = "", title = "行：缴费年期 ；列：会计年度") +
+  theme_minimal()  +  # 添加一个主题以美化图表   
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 1,size = 12),  # X轴标签倾斜50度
+    panel.grid.major = element_line(color = "grey80"),  # 主网格线
+    panel.grid.minor = element_blank(),                 # 次网格线
+    panel.spacing = unit(1, "lines"),                  # 增加面板之间的间距
+    axis.text.y = element_text(size = 7)
+  ) +
+    geom_text(aes(label =  ifelse(round(金额,2) != 0, round(金额,2), "") ),             position = position_stack(vjust = 0.5), 
+            size = 3, 
+            color = "black")  # 在柱子上添加文本标签
+# 将ggplot对象转换为plotly对象
+p122 <- ggplotly(p122) %>%
+  layout(
+    height = 800,  # 设置图表高度
+    width = 1200,    # 设置图表宽度
+    margin = list(b = 200) 
+  )
+
+p122
+
+# library(DTExtra)
+ cat( "数据查看下载") 
+# 使用datatable函数创建交互式表格  
+datatable(data122,   
+          extensions = 'Buttons', # 加载按钮扩展
+          options = list(  
+          pageLength = 4, # 每页显示的行数  
+          dom = 'Bfrtip', # 显示按钮，包括导出  
+          buttons = c( 'csv', 'excel', 'pdf', 'print'), #'copy',
+          lengthMenu = list(c(19, 100), c('19', '100')) ,  # 分页选项
+          initComplete = JS(
+            "function(settings, json) {",
+            "$('table.dataTable').css({'font-size': '12px'});",  # 调整表格字体大小
+            "}")
+          )    
+          )
+```
+
+## 7.旧准则新单保费收入-（分年/分月/分投资类型/分缴费年期）缴费情况
+
+（单位:亿元）
+
+（忽略合计保费小于100万的分类缴费期限）
+```{r   echo = FALSE  ,   message = FALSE, warning = FALSE}
+  zsqlo <- paste("select concat(会计年度,会计期间) as 期间 , 缴费年期描述 , - sum(本期余额)/100000000 as 金额 ,
+               [设计类型描述]
+              from [DJSX].[dbo].[balance]
+              where 会计年度 <= " , zyear  ,  "and 会计期间 <= " ,zmonth , "
+              and   ( [科目] like '2711100000%'  or   [科目] like '27111010%'  or [科目] like  '2721010100'   or  [科目]  like '603101%'   ) and  not  ( [科目]  like '603101%' and  ( [产品描述]  like '%万能%' or   [产品描述]  like '%投资连结%' ))  
+              and 会计年度 >= 2024
+              group  by concat(会计年度,会计期间) , 缴费年期描述, 设计类型描述
+              having  abs(sum(本期余额)) > 1000000
+              order by concat(会计年度,会计期间),缴费年期描述 
+              ")
+  data122 <- dbGetQuery( con,zsqlo)   
+  # print(data122)
+  # print(data)
+
+data122$设计类型描述 <- factor(data122$设计类型描述, levels = c("普通保险", "分红保险", "万能保险", "投资连结保险"))
+data122$缴费年期描述 <- factor(data122$缴费年期描述, levels = c("99年期",	"98年期",	"97年期",	"96年期",	"95年期",	"94年期",	"93年期",	"92年期",	"91年期",	"90年期",	"89年期",	"88年期",	"87年期",	"86年期",	"85年期",	"84年期",	"83年期",	"82年期",	"81年期",	"80年期",	"79年期",	"78年期",	"77年期",	"76年期",	"75年期",	"74年期",	"73年期",	"72年期",	"71年期",	"70年期",	"69年期",	"68年期",	"67年期",	"66年期",	"65年期",	"64年期",	"63年期",	"62年期",	"61年期",	"60年期",	"59年期",	"58年期",	"57年期",	"56年期",	"55年期",	"54年期",	"53年期",	"52年期",	"51年期",	"50年期",	"49年期",	"48年期",	"47年期",	"46年期",	"45年期",	"44年期",	"43年期",	"42年期",	"41年期",	"40年期",	"39年期",	"38年期",	"37年期",	"36年期",	"35年期",	"34年期",	"33年期",	"32年期",	"31年期",	"30年期",	"29年期",	"28年期",	"27年期",	"26年期",	"25年期",	"24年期",	"23年期",	"22年期",	"21年期",	"20年期",	"19年期",	"18年期",	"17年期",	"16年期",	"15年期",	"14年期",	"13年期",	"12年期",	"11年期",	"10年期",	"9年期",	"8年期",	"7年期",	"6年期",	"5年期",	"4年期",	"3年期",	"2年期",	"1年期",	"趸交"))
+
+p122 <- ggplot(data122, aes(x = 设计类型描述, y = 金额, fill = 缴费年期描述)) +  
+  geom_bar(stat = "identity", width = 0.6,length = 20 ) +  
+  scale_fill_brewer(palette = "Paired") +   
+  facet_grid(rows = vars(缴费年期描述), cols = vars(期间)) +
+  labs(x = "", y = "", title = "行：缴费年期 ；列：期间") +
+  theme_minimal()  +  # 添加一个主题以美化图表   
+  theme(
+    axis.text.x = element_text(angle = 50, hjust = 1,size = 8),  # X轴标签倾斜50度
+    panel.grid.major = element_line(color = "grey80"),  # 主网格线
+    panel.grid.minor = element_blank(),                 # 次网格线
+    panel.spacing = unit(1, "lines"),                  # 增加面板之间的间距
+    axis.text.y = element_text(size = 7)
+  ) +
+    geom_text(aes(label =  ifelse(round(金额,2) != 0, round(金额,2), "") ),             position = position_stack(vjust = 0.5), 
+            size = 3, 
+            color = "black")  # 在柱子上添加文本标签
+# 将ggplot对象转换为plotly对象
+p122 <- ggplotly(p122) %>%
+  layout(
+    height = 800,  # 设置图表高度
+    width = 1200,    # 设置图表宽度
+    margin = list(b = 200) 
+  )
+
+p122
+
+# library(DTExtra)
+ cat( "数据查看下载") 
+# 使用datatable函数创建交互式表格  
+datatable(data122,   
+          extensions = 'Buttons', # 加载按钮扩展
+          options = list(  
+          pageLength = 4, # 每页显示的行数  
+          dom = 'Bfrtip', # 显示按钮，包括导出  
+          buttons = c( 'csv', 'excel', 'pdf', 'print'), #'copy',
+          lengthMenu = list(c(19, 100), c('19', '100')) ,  # 分页选项
+          initComplete = JS(
+            "function(settings, json) {",
+            "$('table.dataTable').css({'font-size': '12px'});",  # 调整表格字体大小
+            "}")
+          )    
+          )
+```
+
+
+## 8.旧准则新单保费收入-（分年/分渠道/分投资类型）银行渠道缴费情况
+
+（单位：亿元）
+
+```{r echo=FALSE, fig.height=18, message=FALSE, warning=FALSE}
+ 
+  zsqlo <- paste("select 会计年度 ,  - sum(本期余额)/100000000 as 金额 ,
+                渠道描述,设计类型描述 
+              from [DJSX].[dbo].[balance]
+              where 会计年度 <= " , zyear  ,  "and 会计期间 <= " ,zmonth , "
+              and   ( [科目] like '2711100000%'  or   [科目] like '27111010%'  or [科目] like  '2721010100'   or  [科目]  like '603101%'   ) and  not  ( [科目]  like '603101%' and  ( [产品描述]  like '%万能%' or   [产品描述]  like '%投资连结%' ))  
+              and 渠道 like '103%'
+              and 渠道 not like '%103AAA%'
+              group  by 会计年度 ,  渠道描述,设计类型描述 
+              having round(sum(本期余额),0) < 0 
+union all
+select 会计年度 ,  - sum(本期余额)/100000000 as 金额 ,
+                渠道描述,'合计' as 设计类型描述 
+              from [DJSX].[dbo].[balance]
+              where 会计年度 <= " , zyear  ,  "and 会计期间 <= " ,zmonth , "
+              and   ( [科目] like '2711100000%'  or   [科目] like '27111010%'  or [科目] like  '2721010100'   or  [科目]  like '603101%'   ) and  not  ( [科目]  like '603101%' and  ( [产品描述]  like '%万能%' or   [产品描述]  like '%投资连结%' ))  
+              and 渠道 like '103%'
+              and 渠道 not like '%103AAA%'
+              group  by 会计年度 ,  渠道描述 
+                 ")
+data122 <- dbGetQuery( con,zsqlo) 
+
+data122$设计类型描述 <- factor(data122$设计类型描述, levels = c("普通保险", "分红保险", "万能保险", "投资连结保险","合计"))
+data122$渠道描述 <- factor(data122$渠道描述, levels = c("邮储银行",	"工行",	"建行",	"农行",	"民生银行",	"交行",	"地方商业银行",	"中行",	"中信银行",	"农商行",	"光大银行",	"浦发行",	"招行",	"兴业银行",	"华夏银行",	"广发行"))
+
+  p122 <- ggplot(data122,  aes(x = 设计类型描述 , y = 金额 ,fill = 设计类型描述 )) +  
+    geom_bar(stat = "identity" , width = 0.6  , )  +  
+    scale_fill_manual(values = c("普通保险" = "lightyellow", "分红保险" = "lightpink", "万能保险" = "lightblue", "投资连结保险" = "lightgreen","合计" = "lightcoral"))+
+    #position = "identity"  确定图表绘制时的顺序stack
+    # geom_col(fill="orange") +
+    # scale_fill_brewer(palette = "Paired")  +
+    theme(strip.text = element_text(angle = 0, size = 8, color = "blue", face = "bold") )+
+    facet_grid(rows  = vars(渠道描述),cols = vars(会计年度) ) +
+    # scale_y_continuous(limits = c(0, 500), breaks = seq(0, 500, by = 50)) +
+    labs(x = "",  y = "金额（单位:亿元）" , title = "" )   +
+    theme_minimal() +  # 添加一个主题以美化图表
+    theme(
+      axis.text.x = element_text(angle = 0, hjust = 1),  # X轴标签倾斜50度
+      # panel.grid.major = element_line(color = "grey80"),  # 主网格线
+      # panel.grid.minor = element_blank(),                 # 次网格线
+      panel.spacing = unit(1, "lines")   
+      ) +
+      geom_text(aes(label =  ifelse(round(金额,2) != 0, round(金额,2), "") ), position = position_stack(vjust = 0.5), size = 3, color = "black")  # 在柱子上添加文本标签+  
+        # 自定义颜色
+    #   coord_flip()  # 翻转坐标轴
+ 
+     p122 <- ggplotly( p122 )
+     p122   
+ # library(DTExtra)
+ cat( "数据查看下载") 
+# 使用datatable函数创建交互式表格  
+datatable(data122,   
+          extensions = 'Buttons', # 加载按钮扩展
+          options = list(  
+          pageLength = 4, # 每页显示的行数  
+          dom = 'Bfrtip', # 显示按钮，包括导出  
+          buttons = c( 'csv', 'excel', 'pdf', 'print'), #'copy',
+          lengthMenu = list(c(19, 100), c('19', '100')) ,  # 分页选项
+          initComplete = JS(
+            "function(settings, json) {",
+            "$('table.dataTable').css({'font-size': '12px'});",  # 调整表格字体大小
+            "}")
+          )    
+          )
+```
+
+<br>
+
+# 三、旧准则新单保费收入-其他视角
+
+## 1.旧准则保费收入-（分首续期/分投资类型/分缴费年期）数据流动图（桑基图）
+
+（单位：亿元）<br>
+注：图型的条块的长度代表占比
+
+
+```{r   echo = FALSE  ,   message = FALSE, warning = FALSE}
+zsql <- paste("select   [缴费年期描述] as 缴费年期,
+              [缴费年期描述] ,
+              [设计类型描述], 
+              CASE 
+              WHEN 科目描述 LIKE '%续期%' then '续期'
+              WHEN 科目描述 LIKE '%期交%' then '新单期交'
+              WHEN 科目描述 LIKE '%趸交%' then '新单趸交'             
+              else 'other'end as    [科目描述],
+                - sum(本期余额)/100000000 as 本年新增  
+              from [DJSX].[dbo].[balance]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and  ( [科目] like '271110%'  or [科目] like  '2721010100'   or  [科目]  like '6031%'   ) and  not  ( [科目]  like '6031%' and  ( [产品描述]  like '%万能%' or   [产品描述]  like '%投资连结%' ))  
+              group  by  
+              [缴费年期描述] ,
+              [设计类型描述], 
+              [科目描述]
+              having sum(本期余额) <=  -1000000
+              ")
+datasj <- dbGetQuery( con,zsql)
+ 
+
+datasj1 <- sqldf("select distinct 缴费年期描述 ,sum(本年新增) as 本年新增  from  datasj  group by  缴费年期描述 order by  sum(本年新增) desc ")
+datasj2 <- sqldf("select distinct 设计类型描述 ,sum(本年新增) as 本年新增 from  datasj  group by  设计类型描述 order by  sum(本年新增) desc ")
+datasj3 <- sqldf("select distinct 科目描述 ,sum(本年新增)  as 本年新增    from  datasj  group by  科目描述 order by  sum(本年新增) desc ")
+datasj4 <- sqldf("select distinct concat(' ',缴费年期) AS  缴费年期 ,sum(本年新增) as 本年新增     from  datasj  group by  缴费年期 order by  sum(本年新增) desc ")
+ 
+ 
+
+# datasj1$缴费年期描述 = as.character(paste( datasj1$缴费年期描述, ": ", round(datasj1$本年新增,2) , sep="")   )  
+# datasj2$设计类型描述 = as.character(paste( datasj2$设计类型描述, ": ", round(datasj2$本年新增,2) , sep="")   )  
+# datasj3$科目描述 = as.character(paste( datasj3$科目描述, ": ", round(datasj3$本年新增,2) , sep="")   )  
+# datasj4$缴费年期 = as.character(paste( datasj4$缴费年期, ": ", round(datasj4$本年新增,2) , sep="")   )  
+
+
+
+# 提取所有唯一的节点名称并创建 Nodes 数据框  
+all_nodes <- unique(c( as.character(datasj1$"缴费年期描述"),  
+                       as.character(datasj2$"设计类型描述"),  
+                       as.character(datasj3$"科目描述") ,  
+                       as.character(datasj4$"缴费年期") 
+))  
+Nodes <- data.frame(name = all_nodes)  
+# 合并项目到产品描述的链接与产品描述到渠道描述的链接  
+links3 <- sqldf(" 
+                 select  缴费年期描述 as Source  , 设计类型描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 缴费年期描述, 设计类型描述 
+                union all 
+                 select  设计类型描述 as Source  , 科目描述 as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 设计类型描述, 科目描述   
+                union all 
+                 select  科目描述 as Source  , concat(' ',缴费年期)  as Target , sum(本年新增) as Value   ,'' as 'source_id' ,'' as 'target_id'  
+                      from datasj
+                      group by 科目描述, 缴费年期   
+                ") 
+ 
+
+Nodes$name <- c(as.character(Nodes$name))
+
+links3$Source <- as.character(links3$Source)  
+links3$Target <- as.character(links3$Target)  
+
+links3$source_id <- match(links3$Source, Nodes$name) - 1
+links3$target_id <- match(links3$Target, Nodes$name) - 1
+
+
+links3$Source = paste(links3$Source, ": ", round(links3$Value,2) , sep="")
+links3$Target = paste(links3$Target, ": ", round(links3$Value,2) , sep="")
+
+# 绘制桑基图  
+plot <- sankeyNetwork(Links = links3,  
+                      Nodes = Nodes,  
+                      Source = "source_id",  
+                      Target = "target_id",  
+                      Value = "Value",  
+                      #LinkGroup = 'source_id', # 颜色分组
+                      NodeID = "name",
+                      fontSize = 12,  
+                      nodeWidth = 30,  
+                      units = "亿元")  
+ 
+# 使用 onRender 函数添加自定义 JavaScript 代码
+plot <- onRender(plot, '
+  function(el, x) {
+    // Select all links
+    d3.select(el).selectAll(".link")
+      .append("title")
+      .text(function(d) { return d.value + " 亿元"; });
+  }
+')
+# 展示桑基图  
+plot 
+# library(DTExtra)
+ cat( "数据查看下载") 
+# 使用datatable函数创建交互式表格  
+datatable(datasj,   
+          extensions = 'Buttons', # 加载按钮扩展
+          options = list(  
+          pageLength = 4, # 每页显示的行数  
+          dom = 'Bfrtip', # 显示按钮，包括导出  
+          buttons = c( 'csv', 'excel', 'pdf', 'print'), #'copy',
+          lengthMenu = list(c(19, 100), c('19', '100')) ,  # 分页选项
+          initComplete = JS(
+            "function(settings, json) {",
+            "$('table.dataTable').css({'font-size': '12px'});",  # 调整表格字体大小
+            "}")
+          )    
+          )
+```
+
+## 2.旧准则保费收入-（分投资类型/分首续期/分缴费年期）整体动态图（旭日图）
+
+（单位：亿元）<br>
+注：<br>
+1.可点击第二层和第三层的块，查看该块下分类和及其占比情况<br>
+2.点击圈中心，可返回上一层
+
+```{r   echo = FALSE  ,   message = FALSE, warning = FALSE}
+zsql <- paste("select   
+              [缴费年期描述] ,
+              [设计类型描述], 
+              CASE 
+              WHEN 科目描述 LIKE '%续期%' then '续期'
+              WHEN 科目描述 LIKE '%期交%' then '新单期交'
+              WHEN 科目描述 LIKE '%趸交%' then '新单趸交'             
+              else 'other'end as    [科目描述],
+                - sum(本期余额)/100000000 as 本年新增  
+              from [DJSX].[dbo].[balance]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and  ( [科目] like '271110%'  or [科目] like  '2721010100'   or  [科目]  like '6031%'   ) and  not  ( [科目]  like '6031%' and  ( [产品描述]  like '%万能%' or   [产品描述]  like '%投资连结%' ))  
+              group  by  
+              [缴费年期描述] ,
+              [设计类型描述], 
+              [科目描述]
+          having sum(本期余额) <=  -1000000
+              ")
+
+# 获取数据
+df <- dbGetQuery( con,zsql) 
+
+# 创建新的数据框df1
+df1 <- sqldf(" 
+select '旧准则保费收入'  as  parents  ,设计类型描述 as ids , concat(设计类型描述, concat('<br>',round(sum(本年新增),2) )) as labels,    sum(本年新增)  as value  from df  group by 设计类型描述 
+union all select 设计类型描述 as parents  ,CONCAT(设计类型描述,科目描述) as ids , concat(科目描述,concat('<br>',round(sum(本年新增),2) )) as labels,    sum(本年新增)  as value  from df  group by 设计类型描述 ,CONCAT(设计类型描述,科目描述)
+union all select CONCAT(设计类型描述,科目描述)   ,CONCAT(CONCAT(设计类型描述,科目描述),缴费年期描述) ,concat(缴费年期描述,concat('<br>',round(sum(本年新增),2) )) as labels,    sum(本年新增)  as value  from df  
+             group by CONCAT(设计类型描述,科目描述) ,CONCAT(CONCAT(设计类型描述,科目描述),缴费年期描述)")
+
+# 创建旭日图
+fig1 <- plot_ly( 
+              df1, 
+              ids = ~ids, 
+              labels = ~labels, 
+              parents = ~parents, 
+              values = ~value ,
+              type = 'sunburst',
+              branchvalues = 'total'
+              )
+
+fig1 <- fig1 %>% layout(
+  title = "设计类型优先" ,
+  showlegend = FALSE,
+  autosize = T,
+  # width = 500,
+  # height = 500,
+  margin = list(   t = 40  ),
+  # margin = list( l = 50, r = 50, b = 100, t = 100, pad = 4  ),
+  paper_bgcolor = "white",
+  plot_bgcolor = "white"
+)
+ 
+
+
+# 创建新的数据框df1
+df2 <- sqldf(" 
+select '旧准则保费收入'  as  parents  ,科目描述 as ids , concat(科目描述, concat('<br>',round(sum(本年新增),2) )) as labels,    sum(本年新增)  as value  from df  group by 科目描述 
+union all select 科目描述 as parents  ,CONCAT(科目描述,设计类型描述) as ids , concat(设计类型描述,concat('<br>',round(sum(本年新增),2) )) as labels,    sum(本年新增)  as value  from df  group by 科目描述 ,CONCAT(科目描述,设计类型描述)
+union all select CONCAT(科目描述,设计类型描述)   ,CONCAT(CONCAT(科目描述,设计类型描述),缴费年期描述) ,concat(缴费年期描述,concat('<br>',round(sum(本年新增),2) )) as labels,    sum(本年新增)  as value  from df  
+             group by CONCAT(科目描述,设计类型描述) ,CONCAT(CONCAT(科目描述,设计类型描述),缴费年期描述)")
+
+
+# 创建旭日图
+fig2 <- plot_ly( 
+              df2, 
+              ids = ~ids, 
+              labels = ~labels, 
+              parents = ~parents, 
+              values = ~value ,
+              type = 'sunburst',
+              branchvalues = 'total'
+              )
+
+fig2 <- fig2 %>% layout(
+  title = "首续期优先" ,
+  showlegend = FALSE,
+  autosize = T,
+  # width = 500,
+  # height = 500,
+  margin = list(   t = 40  ),
+  # margin = list(    l = 50,    r = 50,    b = 100,    t = 100,    pad = 4  ),
+  paper_bgcolor = "white",
+  plot_bgcolor = "white"
+)
+ 
+
+
+# 将图表对象放入列表中
+plots <- list(fig1, fig2)
+
+# 设置网格样式
+zstyle <- "display: grid; grid-template-columns: repeat(2, 1fr); grid-gap: 8px;width: 100%;"
+
+# 组合图表
+combined_plot <- tagList(
+    tags$div(
+        style = zstyle,
+        lapply(plots, function(plot) {
+            tags$div(
+                style = "border: 0px solid #ccc; padding: 3px; height: 450px; width: 450px; overflow: visible; justify-content: bottom;", 
+                plot
+            )
+        })
+    )
+)
+# 显示组合图表
+combined_plot
+ 
+
+# library(DTExtra)
+ cat( "数据查看下载") 
+# 使用datatable函数创建交互式表格  
+datatable(df,   
+          extensions = 'Buttons', # 加载按钮扩展
+          options = list(  
+          pageLength = 4, # 每页显示的行数  
+          dom = 'Bfrtip', # 显示按钮，包括导出  
+          buttons = c( 'csv', 'excel', 'pdf', 'print'), #'copy',
+          lengthMenu = list(c(19, 100), c('19', '100')) ,  # 分页选项
+          initComplete = JS(
+            "function(settings, json) {",
+            "$('table.dataTable').css({'font-size': '12px'});",  # 调整表格字体大小
+            "}")
+          )    
+          )
+```
+
+## 3.旧准则保费收入-（分首续期/分产品/分缴费年期）整体动态图（旭日图）
+
+（单位：亿元）<br>
+注：<br>
+1.可点击第二层和第三层的块，查看该块下分类和及其占比情况<br>
+2.点击圈中心，可返回上一层
+
+```{r   echo = FALSE  ,   message = FALSE, warning = FALSE}
+zsql <- paste("select   
+              [缴费年期描述] ,
+              [产品描述], 
+              CASE 
+              WHEN 科目描述 LIKE '%续期%' then '续期'
+              WHEN 科目描述 LIKE '%期交%' then '新单期交'
+              WHEN 科目描述 LIKE '%趸交%' then '新单趸交'             
+              else 'other'end as    [科目描述],
+                - sum(本期余额)/100000000 as 本年新增  
+              from [DJSX].[dbo].[balance]
+              where 会计年度 = " , zyear  , "and 会计期间 <= " ,zmonth , "
+              and  ( [科目] like '271110%'  or [科目] like  '2721010100'   or  [科目]  like '6031%'   ) and  not  ( [科目]  like '6031%' and  ( [产品描述]  like '%万能%' or   [产品描述]  like '%投资连结%' ))  
+              group  by  
+              [缴费年期描述] ,
+              [产品描述], 
+              [科目描述]
+          having sum(本期余额) <=  -1000000
+              ")
+
+# 获取数据
+df <- dbGetQuery( con,zsql) 
+
+# 创建新的数据框df1
+df1 <- sqldf(" 
+select '旧准则保费收入'  as  parents  ,产品描述 as ids , concat(产品描述, concat('<br>',round(sum(本年新增),2) )) as labels,    sum(本年新增)  as value  from df  group by 产品描述 
+union all select 产品描述 as parents  ,CONCAT(产品描述,科目描述) as ids , concat(科目描述,concat('<br>',round(sum(本年新增),2) )) as labels,    sum(本年新增)  as value  from df  group by 产品描述 ,CONCAT(产品描述,科目描述)
+union all select CONCAT(产品描述,科目描述)   ,CONCAT(CONCAT(产品描述,科目描述),缴费年期描述) ,concat(缴费年期描述,concat('<br>',round(sum(本年新增),2) )) as labels,    sum(本年新增)  as value  from df  
+             group by CONCAT(产品描述,科目描述) ,CONCAT(CONCAT(产品描述,科目描述),缴费年期描述)")
+
+# 创建旭日图
+fig1 <- plot_ly( 
+              df1, 
+              ids = ~ids, 
+              labels = ~labels, 
+              parents = ~parents, 
+              values = ~value ,
+              type = 'sunburst',
+              branchvalues = 'total'
+              )
+
+fig1 <- fig1 %>% layout(
+  title = "产品描述优先" ,
+  showlegend = FALSE,
+  autosize = T,
+  # width = 500,
+  # height = 500,
+  margin = list(   t = 40  ),
+  # margin = list( l = 50, r = 50, b = 100, t = 100, pad = 4  ),
+  paper_bgcolor = "white",
+  plot_bgcolor = "white"
+)
+ 
+
+
+# 创建新的数据框df1
+df2 <- sqldf(" 
+select '旧准则保费收入'  as  parents  ,科目描述 as ids , concat(科目描述, concat('<br>',round(sum(本年新增),2) )) as labels,    sum(本年新增)  as value  from df  group by 科目描述 
+union all select 科目描述 as parents  ,CONCAT(科目描述,产品描述) as ids , concat(产品描述,concat('<br>',round(sum(本年新增),2) )) as labels,    sum(本年新增)  as value  from df  group by 科目描述 ,CONCAT(科目描述,产品描述)
+union all select CONCAT(科目描述,产品描述)   ,CONCAT(CONCAT(科目描述,产品描述),缴费年期描述) ,concat(缴费年期描述,concat('<br>',round(sum(本年新增),2) )) as labels,    sum(本年新增)  as value  from df  
+             group by CONCAT(科目描述,产品描述) ,CONCAT(CONCAT(科目描述,产品描述),缴费年期描述)")
+
+
+# 创建旭日图
+fig2 <- plot_ly( 
+              df2, 
+              ids = ~ids, 
+              labels = ~labels, 
+              parents = ~parents, 
+              values = ~value ,
+              type = 'sunburst',
+              branchvalues = 'total'
+              )
+
+fig2 <- fig2 %>% layout(
+  title = "首续期优先" ,
+  showlegend = FALSE,
+  autosize = T,
+  # width = 500,
+  # height = 500,
+  margin = list(   t = 40  ),
+  # margin = list(    l = 50,    r = 50,    b = 100,    t = 100,    pad = 4  ),
+  paper_bgcolor = "white",
+  plot_bgcolor = "white"
+)
+ 
+
+
+# 将图表对象放入列表中
+plots <- list(fig1, fig2)
+# 设置网格样式
+zstyle <- "display: grid; grid-template-columns: repeat(2, 1fr); grid-gap: 8px;width: 100%;"
+
+# 组合图表
+combined_plot <- tagList(
+    tags$div(
+        style = zstyle,
+        lapply(plots, function(plot) {
+            tags$div(
+                style = "border: 0px solid #ccc; padding: 3px; height: 450px; width: 450px; overflow: visible; justify-content: bottom;", 
+                plot
+            )
+        })
+    )
+)
+# 显示组合图表
+combined_plot
+ 
+
+# library(DTExtra)
+ cat( "数据查看下载") 
+# 使用datatable函数创建交互式表格  
+datatable(df,   
+          extensions = 'Buttons', # 加载按钮扩展
+          options = list(  
+          pageLength = 4, # 每页显示的行数  
+          dom = 'Bfrtip', # 显示按钮，包括导出  
+          buttons = c( 'csv', 'excel', 'pdf', 'print'), #'copy',
+          lengthMenu = list(c(19, 100), c('19', '100')) ,  # 分页选项
+          initComplete = JS(
+            "function(settings, json) {",
+            "$('table.dataTable').css({'font-size': '12px'});",  # 调整表格字体大小
+            "}")
+          )    
+          )
+```
+
+
+
+
+
+```{r echo=FALSE, results='asis'}
+cat('
+<div id="top-button" style="display: none; position: fixed; top: 20px; right: 30px; z-index: 99; border: none; outline: none; background-color: red; color: white; cursor: pointer; padding: 15px; border-radius: 4px; font-size: 18px;" onclick="topFunction()">Contents</div>
+
+<script>
+// When the user scrolls down 20px from the top of the document, show the button
+window.onscroll = function() {scrollFunction()};
+
+function scrollFunction() {
+  if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+    document.getElementById("top-button").style.display = "block";
+  } else {
+    document.getElementById("top-button").style.display = "none";
+  }
+}
+
+// When the user clicks on the button, scroll to the top of the document
+function topFunction() {
+  document.body.scrollTop = 0; // For Safari
+  document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
+}
+</script>
+')
+
+
+```

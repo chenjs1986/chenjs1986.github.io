@@ -2,23 +2,23 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>Frank&#39;s Blog</title>
-    <link>https://chenjs1986.github.io/</link>
+    <link>http://localhost:1313/</link>
     <description>Recent content on Frank&#39;s Blog</description>
     <image>
       <title>Frank&#39;s Blog</title>
-      <url>https://chenjs1986.github.io/images/papermod-cover.png</url>
-      <link>https://chenjs1986.github.io/images/papermod-cover.png</link>
+      <url>http://localhost:1313/images/papermod-cover.png</url>
+      <link>http://localhost:1313/images/papermod-cover.png</link>
     </image>
     <generator>Hugo -- 0.133.1</generator>
     <language>en</language>
     <copyright>PaperMod Contributors</copyright>
     <lastBuildDate>Thu, 05 Sep 2024 00:00:00 +0000</lastBuildDate>
-    <atom:link href="https://chenjs1986.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>The database I used</title>
-      <link>https://chenjs1986.github.io/posts/database-1.-the-database-i-used/</link>
+      <link>http://localhost:1313/posts/database-1.-the-database-i-used/</link>
       <pubDate>Thu, 05 Sep 2024 00:00:00 +0000</pubDate>
-      <guid>https://chenjs1986.github.io/posts/database-1.-the-database-i-used/</guid>
+      <guid>http://localhost:1313/posts/database-1.-the-database-i-used/</guid>
       <description>I used two main database. One is Mysql,anther is Sqlserver.
 Early, Mysql is the best choice for me. It&amp;rsquo;s handy and friendly. A financial personal database were builded by it. I downloaded data from CS/BS client and import it into Mysql.
 Then I wrote many sql-language script to get many statements or reports quickly. It&amp;rsquo;s saving much of time for me.
@@ -26,30 +26,18 @@ Now,I use sqlserver to manage huge data because of Mysql support huge data poorl
     </item>
     <item>
       <title>What to do with R?</title>
-      <link>https://chenjs1986.github.io/posts/r-1.-what-i-to-do-with-r/</link>
+      <link>http://localhost:1313/posts/r-1.-what-i-to-do-with-r/</link>
       <pubDate>Tue, 03 Sep 2024 00:00:00 +0000</pubDate>
-      <guid>https://chenjs1986.github.io/posts/r-1.-what-i-to-do-with-r/</guid>
+      <guid>http://localhost:1313/posts/r-1.-what-i-to-do-with-r/</guid>
       <description>R is a very famous programming language. R was designed by statisticians who want analysis to be easy.
 We can use R to analyze data or formal digraph. I usually take some graph by R. As you know, many tasks are very similar in our work and we must do them again and again just because some data is changed. It will spend our much time and it’s very boring. But if you have R, you can do this easily.</description>
     </item>
     <item>
       <title>IFRS17-Four method </title>
-      <link>https://chenjs1986.github.io/posts/irfs17-1.introduce/</link>
+      <link>http://localhost:1313/posts/irfs17-1.introduce/</link>
       <pubDate>Thu, 01 Aug 2024 00:00:00 +0000</pubDate>
-      <guid>https://chenjs1986.github.io/posts/irfs17-1.introduce/</guid>
+      <guid>http://localhost:1313/posts/irfs17-1.introduce/</guid>
       <description>this is a post test</description>
-    </item>
-    <item>
-      <title></title>
-      <link>https://chenjs1986.github.io/posts/r-example/</link>
-      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      <guid>https://chenjs1986.github.io/posts/r-example/</guid>
-      <description>&lt;!DOCTYPE html&gt;xx家人寿保费收入分析（含万能）xx家人寿保费收入分析（含万能）一、旧准则保费收入（含续期）-分析1.旧准则保费收入-分年缴费情况2.旧准则保费收入-（分年/分新单续期）缴费占比情况3.旧准则保费收入-（分年/分新单续期/分设计类型）缴费情况二、旧准则新单保费收入-分析1.旧准则新单保费收入-（分年/分投资类型/分缴费年期）缴费占比情况2.旧准则新单保费收入-（分年/分月/分渠道）缴费情况3.旧准则新单保费收入-（分年/分投资类型/分期趸缴）缴费情况4.旧准则新单保费收入-（分年/分月/分投资类型）缴费情况5.旧准则新单保费收入-（分年/分月/分投资类型）缴费比例情况6.旧准则新单保费收入-（分年/分投资类型/分缴费年期）缴费情况7.旧准则新单保费收入-（分年/分月/分投资类型/分缴费年期）缴费情况8.旧准则新单保费收入-（分年/分渠道/分投资类型）银行渠道缴费情况三、旧准则新单保费收入-其他视角1.旧准则保费收入-（分首续期/分投资类型/分缴费年期）数据流动图（桑基图）2.旧准则保费收入-（分投资类型/分首续期/分缴费年期）整体动态图（旭日图）3.旧准则保费收入-（分首续期/分产品/分缴费年期）整体动态图（旭日图）数据分析期间： 2024 年 8 月
-warming:数据已做随机处理，不代表真实业务！！！！注：图表无特别标注和说明，数据为本年累计；2022年和2023年的对比为同期累计数据。
-一、旧准则保费收入（含续期）-分析（单位：亿元）2024年2023年2022年类型2024年同比增长率2023年同比增长率2022年新单趸交0.60-50.22%1.21-35.43%1.88新单期交0.730.52%0.7324.06%0.58续期1.5746.44%1.0723.53%0.87总规模保费2.91-3.49%3.01-9.58%3.331.旧准则保费收入-分年缴费情况（单位：亿元）
-(1)整体保费情况
-(2)分首续期类型
-## 数据查看下载2.旧准则保费收入-（分年/分新单续期）缴费占比情况（单位：亿元）</description>
     </item>
   </channel>
 </rss>

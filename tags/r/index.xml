@@ -2,23 +2,23 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>R on Frank&#39;s Blog</title>
-    <link>https://chenjs1986.github.io/tags/r/</link>
+    <link>http://localhost:1313/tags/r/</link>
     <description>Recent content in R on Frank&#39;s Blog</description>
     <image>
       <title>Frank&#39;s Blog</title>
-      <url>https://chenjs1986.github.io/images/papermod-cover.png</url>
-      <link>https://chenjs1986.github.io/images/papermod-cover.png</link>
+      <url>http://localhost:1313/images/papermod-cover.png</url>
+      <link>http://localhost:1313/images/papermod-cover.png</link>
     </image>
     <generator>Hugo -- 0.133.1</generator>
     <language>en</language>
     <copyright>PaperMod Contributors</copyright>
     <lastBuildDate>Tue, 03 Sep 2024 00:00:00 +0000</lastBuildDate>
-    <atom:link href="https://chenjs1986.github.io/tags/r/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://localhost:1313/tags/r/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>What to do with R?</title>
-      <link>https://chenjs1986.github.io/posts/r-1.-what-i-to-do-with-r/</link>
+      <link>http://localhost:1313/posts/r-1.-what-i-to-do-with-r/</link>
       <pubDate>Tue, 03 Sep 2024 00:00:00 +0000</pubDate>
-      <guid>https://chenjs1986.github.io/posts/r-1.-what-i-to-do-with-r/</guid>
+      <guid>http://localhost:1313/posts/r-1.-what-i-to-do-with-r/</guid>
       <description>R is a very famous programming language. R was designed by statisticians who want analysis to be easy.
 We can use R to analyze data or formal digraph. I usually take some graph by R. As you know, many tasks are very similar in our work and we must do them again and again just because some data is changed. It will spend our much time and it’s very boring. But if you have R, you can do this easily.</description>
     </item>
