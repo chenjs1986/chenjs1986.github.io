@@ -2,23 +2,23 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>IFRS17 on Frank&#39;s Blog</title>
-    <link>http://localhost:1313/tags/ifrs17/</link>
+    <link>https://chenjs1986.github.io/tags/ifrs17/</link>
     <description>Recent content in IFRS17 on Frank&#39;s Blog</description>
     <image>
       <title>Frank&#39;s Blog</title>
-      <url>http://localhost:1313/images/papermod-cover.png</url>
-      <link>http://localhost:1313/images/papermod-cover.png</link>
+      <url>https://chenjs1986.github.io/images/papermod-cover.png</url>
+      <link>https://chenjs1986.github.io/images/papermod-cover.png</link>
     </image>
     <generator>Hugo -- 0.133.1</generator>
     <language>en</language>
     <copyright>PaperMod Contributors</copyright>
     <lastBuildDate>Thu, 01 Aug 2024 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://localhost:1313/tags/ifrs17/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="https://chenjs1986.github.io/tags/ifrs17/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>IFRS17-Four method </title>
-      <link>http://localhost:1313/posts/irfs17-1.introduce/</link>
+      <link>https://chenjs1986.github.io/posts/irfs17-1.introduce/</link>
       <pubDate>Thu, 01 Aug 2024 00:00:00 +0000</pubDate>
-      <guid>http://localhost:1313/posts/irfs17-1.introduce/</guid>
+      <guid>https://chenjs1986.github.io/posts/irfs17-1.introduce/</guid>
       <description>this is a post test</description>
     </item>
   </channel>
