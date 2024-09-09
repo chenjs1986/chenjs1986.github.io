@@ -12,15 +12,15 @@
     <generator>Hugo -- 0.133.1</generator>
     <language>en</language>
     <copyright>PaperMod Contributors</copyright>
-    <lastBuildDate>Wed, 04 Sep 2024 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 03 Sep 2024 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://chenjs1986.github.io/categories/category1/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>HOW TO USE R</title>
-      <link>https://chenjs1986.github.io/posts/r-1.-what-to-do-with-r/</link>
-      <pubDate>Wed, 04 Sep 2024 00:00:00 +0000</pubDate>
-      <guid>https://chenjs1986.github.io/posts/r-1.-what-to-do-with-r/</guid>
-      <description>Welcome to my blog. I will share my experience here. Built in 108 ms Environment: &amp;ldquo;development&amp;rdquo; Serving pages from disk Running in Fast Render Mode. For full rebuilds on change: hugo server &amp;ndash;disableFastRender Web Server is available at http://localhost:1313/ (bind address 127.0.0.1) Press Ctrl+C to stop
-Change detected, rebuilding site (#1). 2024-09-05 11:56:49.907 +0800 Source changed /posts/r-how-to-use-r.md~rf55abb9d9.tmp Source changed /posts/r-how-to-use-r.md WARN found no layout file for &amp;ldquo;css&amp;rdquo; for kind &amp;ldquo;home&amp;rdquo;: You should create a template file which matches Hugo Layouts Lookup Rules for this combination.</description>
+      <title>What to do with R?</title>
+      <link>https://chenjs1986.github.io/posts/r-1.-what-i-to-do-with-r/</link>
+      <pubDate>Tue, 03 Sep 2024 00:00:00 +0000</pubDate>
+      <guid>https://chenjs1986.github.io/posts/r-1.-what-i-to-do-with-r/</guid>
+      <description>R is a very famous programming language. R was designed by statisticians who want analysis to be easy.
+We can use R to analyze data or formal digraph. I usually take some graph by R. As you know, many tasks are very similar in our work and we must do them again and again just because some data is changed. It will spend our much time and it’s very boring. But if you have R, you can do this easily.</description>
     </item>
     <item>
       <title>IFRS17-Four method </title>
