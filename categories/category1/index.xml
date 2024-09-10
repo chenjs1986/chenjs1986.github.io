@@ -11,7 +11,7 @@
     </image>
     <generator>Hugo -- 0.133.1</generator>
     <language>en</language>
-    <copyright>PaperMod Contributors</copyright>
+    <copyright>Frank Chen</copyright>
     <lastBuildDate>Tue, 10 Sep 2024 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://chenjs1986.github.io/categories/category1/index.xml" rel="self" type="application/rss+xml" />
     <item>
@@ -36,7 +36,7 @@ We can use R to analyze data or formal digraph. I usually take some graph by R. 
       <link>https://chenjs1986.github.io/posts/irfs17-1.introduce/</link>
       <pubDate>Thu, 01 Aug 2024 00:00:00 +0000</pubDate>
       <guid>https://chenjs1986.github.io/posts/irfs17-1.introduce/</guid>
-      <description>What&amp;rsquo;s is IFRS17? Ifrs17 is an international accounting standard for insurance contracts. It&amp;rsquo;s very difficult. Since the standard was pubilshed, there are many discussion about it. Many people welcomed it ,mean while others didn&amp;rsquo;t like it. WHY? The standard let insurance company clarify it&amp;rsquo;s profit how constitute. so for users , like investors , the profit will be very clear and let investors be more easy to take decisions. But for insurance companies, it will spend their much time to prepare for reports.</description>
+      <description>What is IFRS17? Ifrs17 is an international accounting standard for insurance contracts. It&amp;rsquo;s very difficult. Since the standard was pubilshed, there are many discussion about it. Many people welcomed it ,mean while others didn&amp;rsquo;t like it. WHY? The standard let insurance company clarify it&amp;rsquo;s profit how constitute. so for users , like investors , the profit will be very clear and let investors be more easy to take decisions. But for insurance companies, it will spend their much time to prepare for reports.</description>
     </item>
   </channel>
 </rss>
