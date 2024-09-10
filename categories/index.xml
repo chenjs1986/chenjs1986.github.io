@@ -12,20 +12,20 @@
     <generator>Hugo -- 0.133.1</generator>
     <language>en</language>
     <copyright>PaperMod Contributors</copyright>
-    <lastBuildDate>Thu, 05 Sep 2024 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 10 Sep 2024 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://chenjs1986.github.io/categories/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Category1</title>
+      <link>https://chenjs1986.github.io/categories/category1/</link>
+      <pubDate>Tue, 10 Sep 2024 00:00:00 +0000</pubDate>
+      <guid>https://chenjs1986.github.io/categories/category1/</guid>
+      <description></description>
+    </item>
     <item>
       <title>Category2</title>
       <link>https://chenjs1986.github.io/categories/category2/</link>
       <pubDate>Thu, 05 Sep 2024 00:00:00 +0000</pubDate>
       <guid>https://chenjs1986.github.io/categories/category2/</guid>
-      <description></description>
-    </item>
-    <item>
-      <title>Category1</title>
-      <link>https://chenjs1986.github.io/categories/category1/</link>
-      <pubDate>Tue, 03 Sep 2024 00:00:00 +0000</pubDate>
-      <guid>https://chenjs1986.github.io/categories/category1/</guid>
       <description></description>
     </item>
   </channel>

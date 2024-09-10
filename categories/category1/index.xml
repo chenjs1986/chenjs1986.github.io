@@ -12,8 +12,17 @@
     <generator>Hugo -- 0.133.1</generator>
     <language>en</language>
     <copyright>PaperMod Contributors</copyright>
-    <lastBuildDate>Tue, 03 Sep 2024 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 10 Sep 2024 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://chenjs1986.github.io/categories/category1/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Build a web server </title>
+      <link>https://chenjs1986.github.io/posts/web-1.build-a-web-server/</link>
+      <pubDate>Tue, 10 Sep 2024 00:00:00 +0000</pubDate>
+      <guid>https://chenjs1986.github.io/posts/web-1.build-a-web-server/</guid>
+      <description>If you have much data and often need to share with colleagues, I recommend you to set up a web server and design some online websites for needer to get.
+Maybe someone has a question, to build a web server seems difficult, why don’t find other solutions?
+I really try to do but it’s not easy. I once tried output data to RPT documents and transferred to others, but it’ll spend myself too much time.</description>
+    </item>
     <item>
       <title>What to do with R?</title>
       <link>https://chenjs1986.github.io/posts/r-1.-what-i-to-do-with-r/</link>
