@@ -173,6 +173,18 @@
 
 <article class="post-entry"> 
   <header class="entry-header">
+    <h2 class="entry-hint-parent">R - make plots
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>dbConnect: con &lt;- dbConnect(odbc::odbc(), driver = &#34;SQL Server&#34;, server = &#34;10.10.9.57,1433&#34;, database = &#34;DJSX&#34;, uid = &#34;admin&#34;, pwd = &#34;admin&#34;) get data: zsql &lt;- paste(&#34;select 会计年度, - sum(本期余额)/100000000 as 金额 from [DJSX].[dbo].[balance]where 会计年度 &lt;= &#34; , zyear , &#34;and 会计期间 &lt;= &#34; ,zmonth , &#34;and ( [科目] like &#39;271110%&#39; or [科目] like &#39;2721010100&#39; or [科目] like &#39;6031%&#39; ) and not ( [科目] like &#39;6031%&#39; and ( [产品描述] like &#39;%万能%&#39; or [产品描述] like &#39;%投资连结%&#39; )) group by 会计年度 &#34;)# 获取数据data122 &lt;- dbGetQuery( con,zsql) output data: dataor %&gt;%kbl() %&gt;%kable_classic_2( full_width = F , position = &#34;left&#34;) %&gt;% #add_header_above(c(&#34;（单位：亿元）&#34; = 1, &#34;2024年&#34; = 2, &#34;2023年&#34; = 2, &#34;2022年&#34; = 1))# kbl(caption = &#34;&#34; ,border_box_size = 1 , format = &#34;html&#34;) %&gt;%# kable_classic (full_width = F, html_font = &#34;Cambria&#34; , font_size = 16 , position = &#34;left&#34; ) bar: p122 &lt;- ggplot(data122, aes(x = 会计年度, y = 金额 )) &#43; geom_bar(stat = &#34;identity&#34;, width = 0....</p>
+  </div>
+  <footer class="entry-footer"><span title='2024-09-30 00:00:00 +0000 UTC'>September 30, 2024</span>&nbsp;·&nbsp;7 min</footer>
+  <a class="entry-link" aria-label="post link to R - make plots" href="https://chenjs1986.github.io/posts/r-2.-r-model/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
     <h2 class="entry-hint-parent">Build a web server 
     </h2>
   </header>

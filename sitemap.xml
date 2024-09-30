@@ -2,22 +2,28 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://chenjs1986.github.io/posts/web-1.build-a-web-server/</loc>
-    <lastmod>2024-09-10T00:00:00+00:00</lastmod>
-  </url><url>
     <loc>https://chenjs1986.github.io/categories/</loc>
-    <lastmod>2024-09-10T00:00:00+00:00</lastmod>
+    <lastmod>2024-09-30T00:00:00+00:00</lastmod>
   </url><url>
     <loc>https://chenjs1986.github.io/categories/category1/</loc>
-    <lastmod>2024-09-10T00:00:00+00:00</lastmod>
+    <lastmod>2024-09-30T00:00:00+00:00</lastmod>
   </url><url>
     <loc>https://chenjs1986.github.io/</loc>
-    <lastmod>2024-09-10T00:00:00+00:00</lastmod>
+    <lastmod>2024-09-30T00:00:00+00:00</lastmod>
   </url><url>
     <loc>https://chenjs1986.github.io/posts/</loc>
-    <lastmod>2024-09-10T00:00:00+00:00</lastmod>
+    <lastmod>2024-09-30T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://chenjs1986.github.io/tags/r/</loc>
+    <lastmod>2024-09-30T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://chenjs1986.github.io/posts/r-2.-r-model/</loc>
+    <lastmod>2024-09-30T00:00:00+00:00</lastmod>
   </url><url>
     <loc>https://chenjs1986.github.io/tags/</loc>
+    <lastmod>2024-09-30T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://chenjs1986.github.io/posts/web-1.build-a-web-server/</loc>
     <lastmod>2024-09-10T00:00:00+00:00</lastmod>
   </url><url>
     <loc>https://chenjs1986.github.io/tags/web/</loc>
@@ -31,9 +37,6 @@
   </url><url>
     <loc>https://chenjs1986.github.io/posts/database-1.-the-database-i-used/</loc>
     <lastmod>2024-09-05T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>https://chenjs1986.github.io/tags/r/</loc>
-    <lastmod>2024-09-03T00:00:00+00:00</lastmod>
   </url><url>
     <loc>https://chenjs1986.github.io/posts/r-1.-what-i-to-do-with-r/</loc>
     <lastmod>2024-09-03T00:00:00+00:00</lastmod>

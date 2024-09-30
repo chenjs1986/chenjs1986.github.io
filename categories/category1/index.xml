@@ -12,8 +12,15 @@
     <generator>Hugo -- 0.133.1</generator>
     <language>en</language>
     <copyright>Frank Chen</copyright>
-    <lastBuildDate>Tue, 10 Sep 2024 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Mon, 30 Sep 2024 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://chenjs1986.github.io/categories/category1/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>R - make plots</title>
+      <link>https://chenjs1986.github.io/posts/r-2.-r-model/</link>
+      <pubDate>Mon, 30 Sep 2024 00:00:00 +0000</pubDate>
+      <guid>https://chenjs1986.github.io/posts/r-2.-r-model/</guid>
+      <description>dbConnect: con &amp;lt;- dbConnect(odbc::odbc(), driver = &amp;#34;SQL Server&amp;#34;, server = &amp;#34;10.10.9.57,1433&amp;#34;, database = &amp;#34;DJSX&amp;#34;, uid = &amp;#34;admin&amp;#34;, pwd = &amp;#34;admin&amp;#34;) get data: zsql &amp;lt;- paste(&amp;#34;select 会计年度, - sum(本期余额)/100000000 as 金额 from [DJSX].[dbo].[balance]where 会计年度 &amp;lt;= &amp;#34; , zyear , &amp;#34;and 会计期间 &amp;lt;= &amp;#34; ,zmonth , &amp;#34;and ( [科目] like &amp;#39;271110%&amp;#39; or [科目] like &amp;#39;2721010100&amp;#39; or [科目] like &amp;#39;6031%&amp;#39; ) and not ( [科目] like &amp;#39;6031%&amp;#39; and ( [产品描述] like &amp;#39;%万能%&amp;#39; or [产品描述] like &amp;#39;%投资连结%&amp;#39; )) group by 会计年度 &amp;#34;)# 获取数据data122 &amp;lt;- dbGetQuery( con,zsql) output data: dataor %&amp;gt;%kbl() %&amp;gt;%kable_classic_2( full_width = F , position = &amp;#34;left&amp;#34;) %&amp;gt;% #add_header_above(c(&amp;#34;（单位：亿元）&amp;#34; = 1, &amp;#34;2024年&amp;#34; = 2, &amp;#34;2023年&amp;#34; = 2, &amp;#34;2022年&amp;#34; = 1))# kbl(caption = &amp;#34;&amp;#34; ,border_box_size = 1 , format = &amp;#34;html&amp;#34;) %&amp;gt;%# kable_classic (full_width = F, html_font = &amp;#34;Cambria&amp;#34; , font_size = 16 , position = &amp;#34;left&amp;#34; ) bar: p122 &amp;lt;- ggplot(data122, aes(x = 会计年度, y = 金额 )) + geom_bar(stat = &amp;#34;identity&amp;#34;, width = 0.</description>
+    </item>
     <item>
       <title>Build a web server </title>
       <link>https://chenjs1986.github.io/posts/web-1.build-a-web-server/</link>

@@ -12,8 +12,15 @@
     <generator>Hugo -- 0.133.1</generator>
     <language>en</language>
     <copyright>Frank Chen</copyright>
-    <lastBuildDate>Tue, 10 Sep 2024 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Mon, 30 Sep 2024 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://chenjs1986.github.io/tags/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>R</title>
+      <link>https://chenjs1986.github.io/tags/r/</link>
+      <pubDate>Mon, 30 Sep 2024 00:00:00 +0000</pubDate>
+      <guid>https://chenjs1986.github.io/tags/r/</guid>
+      <description></description>
+    </item>
     <item>
       <title>Web</title>
       <link>https://chenjs1986.github.io/tags/web/</link>
@@ -26,13 +33,6 @@
       <link>https://chenjs1986.github.io/tags/sql/</link>
       <pubDate>Thu, 05 Sep 2024 00:00:00 +0000</pubDate>
       <guid>https://chenjs1986.github.io/tags/sql/</guid>
-      <description></description>
-    </item>
-    <item>
-      <title>R</title>
-      <link>https://chenjs1986.github.io/tags/r/</link>
-      <pubDate>Tue, 03 Sep 2024 00:00:00 +0000</pubDate>
-      <guid>https://chenjs1986.github.io/tags/r/</guid>
       <description></description>
     </item>
     <item>
